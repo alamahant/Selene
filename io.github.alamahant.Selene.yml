@@ -11,7 +11,7 @@ finish-args:
   - --socket=pulseaudio
   - --device=dri
   - --share=network
-  # Needed access to ~/Documents where Selene will create a folder named "Selene" where essential files will be placed.
+  # Needed access to ~/Documents where Selene will create a folder named "Selene" where essential user files will be placed.
   - --filesystem=xdg-documents
   - --env=QT_QPA_PLATFORM=wayland;xcb # ensure both Wayland/X11 work
 

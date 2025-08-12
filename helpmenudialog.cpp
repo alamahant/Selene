@@ -388,8 +388,20 @@ Find contacts instantly with a powerful search bar:
 <li>
   <strong>Enable/Disable Logging:</strong> Selene implements a dedicated Logger class.You can however disable logging for blazing fast speed and responsiveness. You can safely do so when you have established optimal functioning.
 </li>
+
+<li>
+  <strong>Sending Onion Urls:</strong> When sending onion urls to your peers -- like for example when sharing www directory path etc is easier to not mix them with plain text. This makes it easier for the recipient to copy and use the sent url more effectively.
+</li>
+
 </ul>
 </div>
+
+<div style="text-align: center; margin-top: 40px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db;">
+<h3 style="color: #2c3e50; margin-top: 0;">Video Tutorial Available</h3>
+<p style="margin-bottom: 5px;">For a visual guide to all these features, visit:</p>
+<p style="margin: 0; font-family: monospace; word-break: break-all;">https://www.youtube.com/watch?v=zZBf6axINHw</p>
+</div>
+
 
 <div style="background: transparent; padding: 15px; border-radius: 8px; margin-bottom: 25px;">
 <h2 style="color: #2c3e50; background: transparent;">Colohon: The Selene Philosophy</h2>
@@ -405,8 +417,6 @@ Different people can approach and use Selene from different angles—and all of 
 </li>
 </ul>
 </div>
-
-
 
 <div style="text-align: center; margin: 30px 0; padding: 20px; background: transparent; border-radius: 8px;">
 <h3 style="color: #495057; margin-top: 0; background: transparent;">Selene: Secure, Private, and Flexible Tor-based Communication</h3>

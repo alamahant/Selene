@@ -412,7 +412,7 @@ void ChatManager::renderMessageToScrollArea(const QString& peerAddress, QScrollA
     if (!chatSessions.contains(peerAddress)) {
         return;
     }
-
+    /*
     // Get the chat widget (already created by tab logic)
     QWidget* chatWidget = scrollArea->widget();
     if (!chatWidget) {
@@ -426,6 +426,34 @@ void ChatManager::renderMessageToScrollArea(const QString& peerAddress, QScrollA
         // Should not happen if tab creation logic is correct
         return;
     }
+    */
+
+    // better version to create widget and layout if not present the very first time we add a contact.
+    // Get or create the chat widget
+    QWidget* chatWidget = scrollArea->widget();
+    if (!chatWidget) {
+        chatWidget = new QWidget();
+        scrollArea->setWidget(chatWidget);
+        scrollArea->setWidgetResizable(true);
+
+        // Create new layout if needed
+        QVBoxLayout* layout = new QVBoxLayout(chatWidget);
+        layout->setAlignment(Qt::AlignTop);
+        layout->setSpacing(3);
+        layout->setContentsMargins(5, 5, 5, 5);
+    }
+
+    // Get the layout (create if needed)
+    QVBoxLayout* layout = qobject_cast<QVBoxLayout*>(chatWidget->layout());
+    if (!layout) {
+        layout = new QVBoxLayout(chatWidget);
+        layout->setAlignment(Qt::AlignTop);
+        layout->setSpacing(3);
+        layout->setContentsMargins(5, 5, 5, 5);
+    }
+
+    //
+
 
     // Remove stretch at the end if present
     int count = layout->count();

@@ -652,7 +652,6 @@ void MainWindow::setupChatManager()
                     //qDebug() << "Event filter installed on" << display->viewport();
 
 
-
                     // Use the chat manager's scroll area rendering method
                     //chatManager->renderMessagesToScrollArea(peerAddress, display);  // method call to rerender all msgs
                     chatManager->renderMessageToScrollArea(peerAddress, display, message, m_bubbleFontSize);  // Changed method call for appending single msg
@@ -663,6 +662,7 @@ void MainWindow::setupChatManager()
                         QWidget* widget = chatTabWidget->widget(i);
                         QScrollArea* tabScrollArea = qobject_cast<QScrollArea*>(  // Changed from QTextBrowser*
                             widget->layout()->itemAt(0)->widget());
+
                         if (tabScrollArea == display && i != currentIndex) {
                             QString friendlyName = networkManager->getFriendlyName(peerAddress);
                             chatTabWidget->setTabText(i, "* " + friendlyName);
@@ -1311,7 +1311,7 @@ void MainWindow::handleMessageReceived(const QString& senderOnion, const QString
         QList<ChatMessage> messages = chatManager->getMessages(senderOnion);
         if (!messages.isEmpty()) {
             const ChatMessage& lastMsg = messages.last();
-            //chatManager->renderMessageToScrollArea(senderOnion, chatDisplays[senderOnion], lastMsg);
+            chatManager->renderMessageToScrollArea(senderOnion, chatDisplays[senderOnion], lastMsg);
         }
     }
     */
@@ -1335,9 +1335,21 @@ void MainWindow::handleMessageReceived(const QString& senderOnion, const QString
         // You could change the tab text color or add an icon to indicate new messages
         chatTabWidget->setTabText(tabIndex, "* " + networkManager->getFriendlyName(senderOnion));
     }
+
+    /*
     QScrollBar* vScrollBar = scrollArea->verticalScrollBar();
     if (vScrollBar) {
         vScrollBar->setValue(vScrollBar->maximum());
+    }
+    */
+
+    // Scroll to bottom of the CORRECT scroll area
+    if (chatDisplays.contains(senderOnion)) {
+        QScrollArea* scrollArea = chatDisplays[senderOnion];  // Get the right scroll area
+        QScrollBar* vScrollBar = scrollArea->verticalScrollBar();
+        if (vScrollBar) {
+            vScrollBar->setValue(vScrollBar->maximum());
+        }
     }
 }
 
