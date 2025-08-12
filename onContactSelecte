@@ -1,0 +1,13 @@
+mainwindow (copy 1).cpp:        contactListWidget->setContactConnected(peerAddress);
+mainwindow (copy 1).cpp:        contactListWidget->setContactConnected(peerAddress);
+mainwindow (copy 1).cpp:        contactListWidget->setContactDisconnected(disconnectedPeer);
+mainwindow (copy 1).cpp:        contactListWidget->refreshContacts(networkManager->getContacts());
+mainwindow (copy 1).cpp:    contactListWidget->refreshContacts(networkManager->getContacts());
+mainwindow.cpp:        contactListWidget->setContactConnected(peerAddress);
+mainwindow.cpp:        contactListWidget->setContactConnected(peerAddress);
+mainwindow.cpp:        contactListWidget->setContactDisconnected(disconnectedPeer);
+mainwindow.cpp:        contactListWidget->setContactDisconnected(peerAddress);
+mainwindow.cpp:        contactListWidget->refreshContacts(networkManager->getContacts());
+mainwindow.cpp:    contactListWidget->refreshContacts(networkManager->getContacts());
+mainwindow.cpp:    contactListWidget->updateContactStatus(onion, isConnected);
+mainwindow.cpp:    contactListWidget->onContactSelected();

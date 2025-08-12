@@ -1,0 +1,21 @@
+CREDITS
+
+Framework:
+- Qt Framework (https://www.qt.io/)
+  Licensed under LGPL v3
+  Copyright (C) The Qt Company Ltd.
+
+Icons:
+- Feather Icons (https://feathericons.com/)
+  Licensed under MIT License
+  Copyright (c) 2013-2017 Cole Bemis
+
+Sounds:
+- Bell sound effects by Mixkit (https://mixkit.co/free-sound-effects/bell/)
+  Licensed under the Mixkit Sound License (https://mixkit.co/license/)
+
+Emoji Font
+- Noto Color Emoji Font 
+  [https://fonts.google.com/noto/specimen/Noto+Color+Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)  
+  Licensed under the SIL Open Font License, Version 1.1  
+  Copyright © 2013 Google Inc.

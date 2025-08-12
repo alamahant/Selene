@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component type="desktop-application">
+
+<id>io.github.alamahant.Selene</id>
+
+<name>Selene</name>
+
+<summary>Tor-based p2p chat and file sharing manager</summary>
+
+<metadata_license>CC0-1.0</metadata_license>
+
+<project_license>GPL-3.0-or-later</project_license>
+
+<description>
+<p>
+Selene is a comprehensive peer-to-peer chat and file sharing application built on the Tor network.
+It enables secure, private communication and seamless file transfers between users, leveraging the anonymity and resilience of Tor.
+</p>
+<p>
+Key Features:
+</p>
+<ul>
+<li>True peer-to-peer messaging: messages travel exclusively over the Tor network, never leaving Tor at any point</li>
+<li>End-to-end RSA encryption for messages, with selectable key lengths: 2048, 4096, or 8192 bits</li>
+<li>File sharing via ephemeral Tor hidden service HTTP servers: recipients access files directly using the provided onion address in Tor Browser or any Tor-enabled private window</li>
+<li>Request new Tor circuits and onion addresses for improved connectivity and privacy</li>
+<li>Configurable Tor ports for advanced users</li>
+<li>Contact export/import and rich messaging features including emojis and file transfers</li>
+<li>Advanced logging system and chat history management</li>
+<li>Password protection at startup for enhanced privacy</li>
+<li>Cross-platform: built with Qt Framework</li>
+</ul>
+<p>
+Selene is designed for privacy advocates and secure communication enthusiasts, offering a robust suite of features for confidential, flexible, and user-friendly Tor-based messaging and file sharing.
+</p>
+</description>
+
+<screenshots>
+</screenshots>
+
+<launchable type="desktop-id">io.github.alamahant.Selene.desktop</launchable>
+
+<url type="homepage">https://github.com/alamahant/Selene</url>
+
+<url type="bugtracker">https://github.com/alamahant/Selene/issues</url>
+
+<developer_name>Alamahant</developer_name>
+
+<categories>
+<category>Network</category>
+<category>Chat</category>
+<category>FileTransfer</category>
+<category>Utility</category>
+</categories>
+
+<keywords>
+<keyword>Tor</keyword>
+<keyword>Onion</keyword>
+<keyword>Peer-to-peer</keyword>
+<keyword>P2P</keyword>
+<keyword>Chat</keyword>
+<keyword>Messaging</keyword>
+<keyword>File Sharing</keyword>
+<keyword>Privacy</keyword>
+<keyword>Encryption</keyword>
+<keyword>Secure</keyword>
+<keyword>Qt</keyword>
+<keyword>Cross-platform</keyword>
+</keywords>
+
+<content_rating type="oars-1.1">
+<content_attribute id="social-info">mild</content_attribute>
+</content_rating>
+
+<releases>
+<release version="1.0.0" date="2025-08-14">
+<description>
+<p>Initial release of Selene on Flathub.</p>
+<ul>
+<li>Tor-based peer-to-peer messaging and file sharing</li>
+<li>End-to-end RSA encryption with multiple key lengths</li>
+<li>Ephemeral Tor hidden service HTTP file sharing</li>
+<li>Configurable Tor circuits and ports</li>
+<li>Contact management and import/export</li>
+<li>Rich messaging with emojis and file transfers</li>
+<li>Advanced logging and chat history</li>
+<li>Password protection at startup</li>
+<li>Cross-platform Qt interface</li>
+</ul>
+</description>
+</release>
+</releases>
+
+<provides>
+<binary>Selene</binary>
+</provides>
+
+<requires>
+<display_length compare="ge">768</display_length>
+</requires>
+
+<recommends>
+<control>keyboard</control>
+<control>pointing</control>
+</recommends>
+
+</component>
+

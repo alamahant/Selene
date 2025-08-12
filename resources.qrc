@@ -1,0 +1,38 @@
+<RCC>
+    <qresource prefix="/">
+        <file>emojis/NotoColorEmoji.ttf</file>
+        <file>icons/selene.png</file>
+        <file>sound/connected.wav</file>
+        <file>sound/disconnected.wav</file>
+        <file>sound/incomingConnection.wav</file>
+        <file>sound/messageReceived.wav</file>
+        <file>sound/unknownContact.wav</file>
+        <file>sound/messageSent.wav</file>
+        <file>icons/refresh-cw.svg</file>
+        <file>icons/refresh-ccw.svg</file>
+        <file>icons/rotate-cw.svg</file>
+        <file>icons/rotate-ccw.svg</file>
+        <file>icons/copy.svg</file>
+        <file>icons/clipboard.svg</file>
+        <file>icons/folder.svg</file>
+        <file>icons/folder-plus.svg</file>
+        <file>icons/plus-square.svg</file>
+        <file>icons/plus-circle.svg</file>
+        <file>icons/plus.svg</file>
+        <file>icons/play.svg</file>
+        <file>icons/play-circle.svg</file>
+        <file>icons/stop-circle.svg</file>
+        <file>icons/trash.svg</file>
+        <file>icons/trash-2.svg</file>
+        <file>icons/menu.svg</file>
+        <file>icons/sidebar.svg</file>
+        <file>icons/key.svg</file>
+        <file>icons/file-text.svg</file>
+        <file>icons/edit.svg</file>
+        <file>icons/volume-2.svg</file>
+        <file>icons/volume-x.svg</file>
+        <file>icons/eye.svg</file>
+        <file>icons/file-plus.svg</file>
+        <file>icons/navigation.svg</file>
+    </qresource>
+</RCC>

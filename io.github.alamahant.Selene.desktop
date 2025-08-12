@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Selene
+GenericName=Tor P2P Chat & File Sharing
+Comment=Secure peer-to-peer chat and file sharing over the Tor network
+Icon=io.github.alamahant.Selene
+Exec=Selene
+Terminal=false
+Categories=Network;Chat;FileTransfer;Utility;Security;Privacy;
+Keywords=tor;onion;chat;messaging;p2p;peer-to-peer;file;filesharing;privacy;encryption;secure;qt;
+StartupNotify=true
+X-Flatpak=io.github.alamahant.Selene
+
