@@ -36,7 +36,6 @@ int main(int argc, char *argv[])
     QDir().mkpath(getContactsDirPath()); // Ensure the directory exists
     QDir().mkpath(getFileSaveDirPath());
     QDir().mkpath(getConfigDirPath());
-    qDebug() << "from main" << getConfigDirPath();
     QDir().mkpath(getDocumentsDirPath());
     QDir().mkpath(getWWWDir());
 

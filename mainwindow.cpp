@@ -37,7 +37,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     loadPortsFromTorrc();
 
-    qDebug() << DefaultChatServicePort << " "<< DefaultHttpServicePort << " " << DefaultControlPort << " " <<DefaultProxyPort;
     Logger::log(Logger::INFO, QString("Default ports: Chat=%1, HTTP=%2, Control=%3, Proxy=%4")
                                   .arg(DefaultChatServicePort)
                                   .arg(DefaultHttpServicePort)
@@ -160,7 +159,6 @@ MainWindow::MainWindow(QWidget *parent)
         myOnion = QString::fromUtf8(onionFile.readAll()).trimmed();
         onionFile.close();
     }
-    qDebug() << "my ONION "<< myOnion;
 
     //clear history
     if (enableClearAllChatsCheckBox->isChecked()) {
@@ -649,7 +647,6 @@ void MainWindow::setupChatManager()
                     QScrollArea* display = chatDisplays[peerAddress];  // Changed from QTextBrowser*
                     // add event filter for increasing font size
                     //display->viewport()->installEventFilter(this);
-                    //qDebug() << "Event filter installed on" << display->viewport();
 
 
                     // Use the chat manager's scroll area rendering method
@@ -2316,8 +2313,6 @@ QString MainWindow::encryptMessageForPeer(const QString& peerOnion, const QStrin
     QString peerPublicKey = contactManager->getContact(peerOnion).publicKey;
 
     // Debug: Show which peer and key we're using
-    qDebug() << "[encryptMessageForPeer] Peer:" << peerOnion;
-    qDebug() << "[encryptMessageForPeer] Public Key:" << peerPublicKey;
 
     QByteArray encrypted;
 
@@ -2325,13 +2320,10 @@ QString MainWindow::encryptMessageForPeer(const QString& peerOnion, const QStrin
     bool ok = crypt.encrypt(plainText.toUtf8(), peerPublicKey, encrypted);
 
     if (!ok) {
-        qDebug() << "[encryptMessageForPeer] Encryption failed!";
-        qDebug() << "[encryptMessageForPeer] Plaintext:" << plainText;
         return QString();
     }
 
     // Debug: Show encrypted (base64) output
-    qDebug() << "[encryptMessageForPeer] Encryption succeeded. Base64:" << QString::fromUtf8(encrypted.toBase64());
 
     // Return base64-encoded ciphertext for easy transport
     return QString::fromUtf8(encrypted.toBase64());
@@ -2364,7 +2356,6 @@ void MainWindow::onEncryptToggled(bool checked) {
 
     // 1. Validate peer selection
     const QString peerOnion = contactAddressLabel->text().trimmed();
-    qDebug() << "Toggling encryption for:" << peerOnion;
 
     if (peerOnion.isEmpty() || peerOnion == myOnion) {
         QMessageBox::warning(this, "Invalid Peer", "Select a valid peer first");
@@ -2406,7 +2397,6 @@ void MainWindow::onEncryptToggled(bool checked) {
     Contact contact = contactManager->getContact(peerOnion);
     contact.encryptionEnabled = checked;
     contactManager->updateContact(contact);
-    qDebug() << "Encryption toggled for" << peerOnion << "to" << checked;
 }
 
 
@@ -2798,15 +2788,12 @@ void MainWindow::dropEvent(QDropEvent *event)
 
 bool MainWindow::eventFilter(QObject* obj, QEvent* event)
 {
-    qDebug() << "eventFilter called for" << obj << "event type" << event->type();
 
 
     if (event->type() == QEvent::Wheel) {
         QWheelEvent* wheelEvent = static_cast<QWheelEvent*>(event);
-        qDebug() << "Modifiers:" << QApplication::keyboardModifiers();
 
         if (QApplication::keyboardModifiers() & Qt::ControlModifier) {
-            qDebug() << "Ctrl+Wheel detected!";
 
             // Adjust font size
             if (wheelEvent->angleDelta().y() > 0)
@@ -2871,7 +2858,6 @@ void MainWindow::checkFirstRun() {
     bool firstRun = settings.value("firstRun", true).toBool();
 
     if (firstRun) {
-        qDebug() << "First run detected!";
         // Do your first-time setup here...
 
         settings.setValue("firstRun", false);
@@ -2880,7 +2866,6 @@ void MainWindow::checkFirstRun() {
                                  "To finalize setup, please restart the application after the UI is fully loaded");
         // Optionally: qApp->quit();
     } else {
-        qDebug() << "Not first run.";
     }
 }
 
@@ -2904,16 +2889,12 @@ void MainWindow::performFactoryReset() {
 
     // Delete config dir (can contain your settings)
     QDir dirConfig(configDir);
-    qDebug() << configDir;
     bool deletedConfig = dirConfig.exists() ? dirConfig.removeRecursively() : true;
-    qDebug() << "config dir is " << configDir;
 
     QFile configFile(getConfigDirPath() + ".conf");
     if (configFile.exists()) {
         if (!configFile.remove()) {
-            qDebug() << "Failed to delete config file:" << configFile.fileName() << configFile.errorString();
         } else {
-            qDebug() << "Config file deleted:" << configFile.fileName();
         }
     }
 
