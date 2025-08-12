@@ -37,6 +37,18 @@ Selene is designed for privacy advocates and secure communication enthusiasts, o
 </description>
 
 <screenshots>
+<screenshot type="default">
+    <caption>Main view</caption>
+    <image>https://raw.githubusercontent.com/alamahant/Selene/master/screenshots/Selene-MainView.png</image>
+  </screenshot>
+  <screenshot>
+    <caption>Chatting in action</caption>
+    <image>https://raw.githubusercontent.com/alamahant/Selene/master/screenshots/Selene-Chatting-in-action.png</image>
+  </screenshot>
+<screenshot type="video">
+    <caption>How to use Selene</caption>
+    <video src="https://www.youtube.com/watch?v=zZBf6axINHw"/>
+  </screenshot>
 </screenshots>
 
 <launchable type="desktop-id">io.github.alamahant.Selene.desktop</launchable>
@@ -77,6 +89,7 @@ Selene is designed for privacy advocates and secure communication enthusiasts, o
 <release version="1.0.0" date="2025-08-14">
 <description>
 <p>Initial release of Selene on Flathub.</p>
+<p>Watch the demo: <a href="https://youtu.be/zZBf6axINHw">How to use Selene (YouTube)</a></p>
 <ul>
 <li>Tor-based peer-to-peer messaging and file sharing</li>
 <li>End-to-end RSA encryption with multiple key lengths</li>
