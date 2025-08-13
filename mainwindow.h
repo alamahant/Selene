@@ -206,6 +206,7 @@ private:
     QAction* logViewerAction;
     QAction* muteAction;
     QAction *actionTorBridge;
+    QAction *getContactsDirPathAction;
 
     void setupActions();
     QComboBox* rsaBitsCombo;

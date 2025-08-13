@@ -37,6 +37,7 @@ QString getWWWDir() {
     return dataDir + QDir::separator() + "www";
     //return getDocumentsDirPath() + QDir::separator() + "www";
 }
+
 QString getTorHttpHiddenDirPath(){
     return getAppDataDir() + QDir::separator() + ".selene" + QDir::separator() + "file_hidden_service";
 }

@@ -82,6 +82,18 @@ Selene is designed for privacy advocates and secure communication enthusiasts, o
 </content_rating>
 
 <releases>
+
+  <release version="1.0.1" date="2025-08-13">
+    <description>
+      <p>Bug fix release addressing sandbox path issues:</p>
+      <ul>
+        <li>Fixed DocumentRoot directory to point to correct flatpak sandboxed location</li>
+        <li>Corrected Contacts directory path for sandboxed environment</li>
+      </ul>
+    </description>
+  </release>
+
+
 <release version="1.0.0" date="2025-08-13">
 <description>
 <p>Initial release of Selene on Flathub.</p>

@@ -49,7 +49,7 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle("Selene - P2P Chat");
     setWindowIcon(QIcon(":/icons/selene.png"));  // Resource or file path
 
-    resize(1050, 700);
+    resize(1100, 700);
     isConnected = false;
     connectedPeerAddress = "";
     contactNameLabel = nullptr;
@@ -1378,7 +1378,7 @@ QToolBar* MainWindow::getToolBar() {
     chatLabel->setText("Chat");
     toolbar->addWidget(chatLabel);
     toolbar->addAction(copyOnionAction);
-
+    toolbar->addAction(getContactsDirPathAction);
     toolbar->addAction(clearCurrentHistoryAction);
     toolbar->addAction(clearAllHistoryAction);
     //toolbar->addAction(newChatOnionAction);
@@ -1971,6 +1971,20 @@ void MainWindow::setupActions()
         QMessageBox::information(this, tr("WWW Directory path copied"),
                                  tr("The HTTP server file-sharing path has been copied to your clipboard:\n%1").arg(wwwDirPath));
     });
+
+    // get contacts dir path
+    getContactsDirPathAction = new QAction(QIcon(":/icons/folder.svg"), tr(""), this);
+
+    getContactsDirPathAction->setObjectName("getcontactsdir");
+    getContactsDirPathAction->setToolTip(tr("Copy Contacts directory path to clipboard"));
+    connect(getContactsDirPathAction, &QAction::triggered, this, [this]() {
+        QString contactsPath = getContactsDirPath();
+        QClipboard* clipboard = QGuiApplication::clipboard();
+        clipboard->setText(contactsPath);
+        QMessageBox::information(this, tr("Contacts Directory path copied"),
+                                 tr("The Contacts directory path has been copied to your clipboard:\n%1").arg(contactsPath));
+    });
+    //
 
     // Start HTTP Server
     //startServerAction = new QAction(style->standardIcon(QStyle::SP_MediaPlay), tr(""), this);

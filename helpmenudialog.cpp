@@ -233,6 +233,11 @@ QString HelpMenuDialog::getInstructionsContent()
 <li>
   In the Chat area toolbar, press <strong>Export Contact Information</strong> to save your details as a <code>.contact</code> file.
 </li>
+
+<li>
+  <strong>Get your Contacts directory path</strong> In order to easilly navigate to your Contacts directory, in the toolbar press the 'Copy Contacts directory path to clipboard' button, and open your file manager to the given location.
+</li>
+
 <li>
   <strong>Deliver your <code>.contact</code> file</strong> to peers via email or any preferred method.
 </li>

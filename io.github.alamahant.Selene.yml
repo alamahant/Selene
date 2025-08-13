@@ -38,4 +38,4 @@ modules:
       # Main application source
       - type: git
         url: https://github.com/alamahant/Selene.git
-        tag: v1.0.0
+        tag: v1.0.1
