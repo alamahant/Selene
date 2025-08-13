@@ -26,16 +26,16 @@ QString getChatHistoryFilePath() {
 }
 
 QString getFileSaveDirPath() {
-    //QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-    //return dataDir + QDir::separator() + "files";
-    return getDocumentsDirPath() + QDir::separator() + "files";
+    QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    return dataDir + QDir::separator() + "files";
+    //return getDocumentsDirPath() + QDir::separator() + "files";
 
 }
 
 QString getWWWDir() {
-    //QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-    //return dataDir + QDir::separator() + "www";
-    return getDocumentsDirPath() + QDir::separator() + "www";
+    QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    return dataDir + QDir::separator() + "www";
+    //return getDocumentsDirPath() + QDir::separator() + "www";
 }
 QString getTorHttpHiddenDirPath(){
     return getAppDataDir() + QDir::separator() + ".selene" + QDir::separator() + "file_hidden_service";
@@ -50,8 +50,8 @@ QString getCryptoDirPath(){
 }
 
 QString getContactsDirPath(){
-    //return getAppDataDir() + QDir::separator() + "contacts";
-    return getDocumentsDirPath() + QDir::separator() + "contacts";
+    return getAppDataDir() + QDir::separator() + "contacts";
+    //return getDocumentsDirPath() + QDir::separator() + "contacts";
 }
 
 QString getTorrcDirPath(){

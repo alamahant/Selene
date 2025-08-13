@@ -176,9 +176,9 @@ QString HelpMenuDialog::getFeaturesContent()
 <li style="background: transparent;"><strong>Contact Export & Import:</strong> Export your contact information to a .contact file for easy sharing. Recipients can simply drag and drop the file into the UI to add contacts, with manual addition also supported.</li>
 <li style="background: transparent;"><strong>Tor-native End-to-End Encryption:</strong> All communication remains strictly within the Tor network, leveraging Tor's built-in encryption for maximum privacy. Additionally, users may enable extra RSA encryption (2048–8192 bits) for messages, providing an extra layer of security.</li>
 <li style="background: transparent;"><strong>Advanced Logging System:</strong> Comprehensive logging captures extensive data for diagnostics and auditing. Includes a powerful log viewer with search and truncation capabilities, plus options to enable/disable logging for optimal performance.</li>
-<li style="background: transparent;"><strong>Rich Messaging & File Sharing:</strong> Send plain or encrypted messages, share emojis via a dedicated emoji class, and transfer files seamlessly. Files placed in <code>~/Documents/Selene/www</code> can be shared via an ephemeral onion HTTP server, with the onion URL easily accessible from the toolbar. Direct file sharing in chat is supported via file dialog, with automatic secure link generation for recipients.</li>
+<li style="background: transparent;"><strong>Rich Messaging & File Sharing:</strong> Send plain or encrypted messages, share emojis via a dedicated emoji class, and transfer files seamlessly. Files can be shared via an ephemeral onion HTTP server, with the onion URL easily accessible from the toolbar. Direct file sharing in chat is supported via file dialog, with automatic secure link generation for recipients.</li>
 <li style="background: transparent;"><strong>Per-Peer Encryption Control:</strong> Enable or disable additional encryption for each peer using a simple checkbox, tailoring security to your needs.</li>
-<li style="background: transparent;"><strong>Factory Reset:</strong> Restore the app to its original state with a single action. All data is wiped except for contacts and shared files stored in <code>~/Documents/Selene</code>.</li>
+<li style="background: transparent;"><strong>Factory Reset:</strong> Restore the app to its original state with a single action. All data is wiped except for contacts and shared files stored in 'contacts' directory.</li>
 <li style="background: transparent;"><strong>Quick Access Toolbar:</strong> Convenient toolbar buttons allow instant copying of your chat onion, HTTP onion, and shared directory paths to the clipboard.</li>
 <li style="background: transparent;"><strong>Chat History Management:</strong> Easily clear chat messages and history per peer or for all peers. Optionally enable automatic history cleaning at app startup for enhanced privacy.</li>
 <li style="background: transparent;">
@@ -290,7 +290,7 @@ Find contacts instantly with a powerful search bar:
 <h2 style="color: #27ae60; background: transparent;">4. Sharing Files via Tor HTTP Server</h2>
 <ul style="margin: 10px 0 10px 25px;">
 <li>
-  Place any files you wish to share in the <code>~/Documents/Selene/www</code> directory.
+  Place any files you wish to share in the 'www' directory.
 </li>
 <li>
   In the Server area of the toolbar, press <strong>Start HTTP Server</strong> to begin sharing.
@@ -391,12 +391,6 @@ Find contacts instantly with a powerful search bar:
 
 <li>
   <strong>Sending Onion Urls:</strong> When sending onion urls to your peers -- like for example when sharing www directory path etc is easier to not mix them with plain text. This makes it easier for the recipient to copy and use the sent url more effectively.
-</li>
-
-<li>
-  <strong>File Downloads:</strong> All shared files are sent with download-enforcing headers.
-  If your browser opens them instead (common for PDFs/videos), then please
-  <strong>right-click → "Save link as"</strong>.
 </li>
 
 </ul>
