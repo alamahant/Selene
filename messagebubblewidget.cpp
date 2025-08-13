@@ -66,7 +66,11 @@ MessageBubbleWidget::MessageBubbleWidget(const ChatMessage& message, const QStri
     bubbleLayout->addWidget(m_contentLabel);
 
     // Time label
-    m_timeLabel = new QLabel(message.timestamp.toString("hh:mm:ss"), bubbleContainer);
+    //m_timeLabel = new QLabel(message.timestamp.toString("hh:mm:ss"), bubbleContainer); //might leak senders timezone
+
+    // ALWAYS show receiver's local time for ALL messages
+    m_timeLabel = new QLabel(QDateTime::currentDateTime().toString("hh:mm:ss"), bubbleContainer);
+
     m_timeLabel->setStyleSheet("color: rgba(255, 255, 255, 180); font-size: 11px;");
     m_timeLabel->setAlignment(Qt::AlignRight);
     m_timeLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
