@@ -393,6 +393,12 @@ Find contacts instantly with a powerful search bar:
   <strong>Sending Onion Urls:</strong> When sending onion urls to your peers -- like for example when sharing www directory path etc is easier to not mix them with plain text. This makes it easier for the recipient to copy and use the sent url more effectively.
 </li>
 
+<li>
+  <strong>File Downloads:</strong> All shared files are sent with download-enforcing headers.
+  If your browser opens them instead (common for PDFs/videos), then please
+  <strong>right-click → "Save link as"</strong>.
+</li>
+
 </ul>
 </div>
 

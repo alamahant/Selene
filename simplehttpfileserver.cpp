@@ -188,11 +188,107 @@ void SimpleHttpFileServer::sendFile(QTcpSocket* socket, const QString& fullFileP
 
     // Basic content type detection
     QString contentType = "application/octet-stream";
-    if (fileName.endsWith(".txt")) contentType = "text/plain";
-    else if (fileName.endsWith(".html")) contentType = "text/html";
-    else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) contentType = "image/jpeg";
-    else if (fileName.endsWith(".png")) contentType = "image/png";
-    else if (fileName.endsWith(".pdf")) contentType = "application/pdf";
+
+    // ===== Supported File Extensions =====
+    // Text & Documents
+    if (fileName.endsWith(".txt"))
+        contentType = "text/plain";
+    else if (fileName.endsWith(".html") || fileName.endsWith(".htm"))
+        contentType = "text/html";
+    else if (fileName.endsWith(".css"))
+        contentType = "text/css";
+    else if (fileName.endsWith(".js"))
+        contentType = "application/javascript";
+    else if (fileName.endsWith(".json"))
+        contentType = "application/json";
+    else if (fileName.endsWith(".xml"))
+        contentType = "application/xml";
+    else if (fileName.endsWith(".csv"))
+        contentType = "text/csv";
+    else if (fileName.endsWith(".pdf"))
+        contentType = "application/pdf";
+
+    // Images
+    else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg"))
+        contentType = "image/jpeg";
+    else if (fileName.endsWith(".png"))
+        contentType = "image/png";
+    else if (fileName.endsWith(".gif"))
+        contentType = "image/gif";
+    else if (fileName.endsWith(".svg"))
+        contentType = "image/svg+xml";
+    else if (fileName.endsWith(".webp"))
+        contentType = "image/webp";
+    else if (fileName.endsWith(".bmp"))
+        contentType = "image/bmp";
+    else if (fileName.endsWith(".ico"))
+        contentType = "image/x-icon";
+
+    // Audio
+    else if (fileName.endsWith(".mp3"))
+        contentType = "audio/mpeg";
+    else if (fileName.endsWith(".wav"))
+        contentType = "audio/wav";
+    else if (fileName.endsWith(".ogg"))
+        contentType = "audio/ogg";
+    else if (fileName.endsWith(".flac"))
+        contentType = "audio/flac";
+    else if (fileName.endsWith(".m4a"))
+        contentType = "audio/mp4";
+
+    // Video
+    else if (fileName.endsWith(".mp4"))
+        contentType = "video/mp4";
+    else if (fileName.endsWith(".webm"))
+        contentType = "video/webm";
+    else if (fileName.endsWith(".mkv"))
+        contentType = "video/x-matroska";
+    else if (fileName.endsWith(".avi"))
+        contentType = "video/x-msvideo";
+    else if (fileName.endsWith(".mov"))
+        contentType = "video/quicktime";
+
+    // Archives
+    else if (fileName.endsWith(".zip"))
+        contentType = "application/zip";
+    else if (fileName.endsWith(".tar"))
+        contentType = "application/x-tar";
+    else if (fileName.endsWith(".gz") || fileName.endsWith(".tgz"))
+        contentType = "application/gzip";
+    else if (fileName.endsWith(".7z"))
+        contentType = "application/x-7z-compressed";
+    else if (fileName.endsWith(".rar"))
+        contentType = "application/x-rar-compressed";
+
+    // Office & Documents
+    else if (fileName.endsWith(".doc") || fileName.endsWith(".docx"))
+        contentType = "application/msword";
+    else if (fileName.endsWith(".xls") || fileName.endsWith(".xlsx"))
+        contentType = "application/vnd.ms-excel";
+    else if (fileName.endsWith(".ppt") || fileName.endsWith(".pptx"))
+        contentType = "application/vnd.ms-powerpoint";
+    else if (fileName.endsWith(".odt"))
+        contentType = "application/vnd.oasis.opendocument.text";
+    else if (fileName.endsWith(".ods"))
+        contentType = "application/vnd.oasis.opendocument.spreadsheet";
+
+    // Executables & Binaries
+    else if (fileName.endsWith(".exe") || fileName.endsWith(".msi"))
+        contentType = "application/octet-stream"; // Forces download
+    else if (fileName.endsWith(".deb"))
+        contentType = "application/vnd.debian.binary-package";
+    else if (fileName.endsWith(".rpm"))
+        contentType = "application/x-rpm";
+    else if (fileName.endsWith(".apk"))
+        contentType = "application/vnd.android.package-archive";
+
+    // Fonts
+    else if (fileName.endsWith(".ttf"))
+        contentType = "font/ttf";
+    else if (fileName.endsWith(".woff"))
+        contentType = "font/woff";
+    else if (fileName.endsWith(".woff2"))
+        contentType = "font/woff2";
 
     QString disposition = QString("attachment; filename=\"%1\"").arg(fileName);
 
