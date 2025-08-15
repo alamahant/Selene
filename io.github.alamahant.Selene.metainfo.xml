@@ -83,6 +83,16 @@ Selene is designed for privacy advocates and secure communication enthusiasts, o
 
 <releases>
 
+<release version="1.0.2" date="2025-08-15">
+    <description>
+      <p>Changes and improvements:</p>
+      <ul>
+        <li>Reverted to using ~/Documents/Selene as default data location after Flathub granted filesystem=xdg-documents permission</li>
+        <li>Enhanced mute functionality to consistently apply to all sounds including startup welcome tone</li>
+      </ul>
+    </description>
+</release>
+
   <release version="1.0.1" date="2025-08-13">
     <description>
       <p>Bug fix release addressing sandbox path issues:</p>

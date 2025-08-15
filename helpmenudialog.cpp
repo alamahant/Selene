@@ -219,7 +219,7 @@ Selene is designed for privacy advocates and secure communication enthusiasts, o
 
 QString HelpMenuDialog::getInstructionsContent()
 {
-    return R"(
+    return QString(R"(
 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #2c3e50; background: transparent;">
 
 <h1 style="color: #e74c3c; text-align: center; margin-bottom: 20px; background: transparent;">📋 How to Use Selene</h1>
@@ -235,7 +235,7 @@ QString HelpMenuDialog::getInstructionsContent()
 </li>
 
 <li>
-  <strong>Get your Contacts directory path</strong> In order to easilly navigate to your Contacts directory, in the toolbar press the 'Copy Contacts directory path to clipboard' button, and open your file manager to the given location.
+  <strong>Get your Contacts directory path</strong> by finding in the toolbar and pressing the <strong>'Copy Contacts directory path to clipboard'</strong> button. Then  open your file manager in the given location <strong>%1</strong>
 </li>
 
 <li>
@@ -304,7 +304,7 @@ Find contacts instantly with a powerful search bar:
   To find the exact document root directory, press <strong>Copy WWW Dir Path</strong> in the toolbar. This copies the path to your clipboard for easy navigation.
 </li>
 <li>
-  After starting the server, get your HTTP onion address by clicking <strong>Copy HTTP Onion</strong> in the toolbar. Share this onion address with your peers.
+  After starting the server, get your HTTP onion address by clicking <strong>Copy HTTP Onion</strong> in the toolbar. Share this onion address with your peers The address is <strong>%2</strong>
 </li>
 <li>
   As long as Selene is running, your peers can access shared files via Tor Browser or any Tor-enabled browser window.
@@ -404,7 +404,7 @@ Find contacts instantly with a powerful search bar:
 <div style="text-align: center; margin-top: 40px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db;">
 <h3 style="color: #2c3e50; margin-top: 0;">Video Tutorial Available</h3>
 <p style="margin-bottom: 5px;">For a visual guide to all these features, visit:</p>
-<p style="margin: 0; font-family: monospace; word-break: break-all;">https://www.youtube.com/watch?v=zZBf6axINHw</p>
+<p style="margin: 0; font-family: monospace; word-break: break-all;">https://archive.org/details/2025-08-12-14-34-11</p>
 </div>
 
 
@@ -429,7 +429,7 @@ Different people can approach and use Selene from different angles—and all of 
 </div>
 
 </div>
-)";
+)").arg(getContactsDirPath(), getWWWDir());;
 }
 
 

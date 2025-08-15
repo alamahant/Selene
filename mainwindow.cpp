@@ -148,12 +148,6 @@ MainWindow::MainWindow(QWidget *parent)
     //httpServer = new SimpleHttpFileServer(docRootPath, 9090, this);
     httpServer = new SimpleHttpFileServer(docRootPath, DefaultHttpServicePort, this);
 
-    //sound welcome
-    QTimer::singleShot(1000, this, [this]() {
-        playSound(SoundType::MessageReceived, play);
-    });
-
-
     QFile onionFile(getTorChatHiddenDirPath() + "/hostname");
     if (onionFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         myOnion = QString::fromUtf8(onionFile.readAll()).trimmed();
@@ -166,8 +160,14 @@ MainWindow::MainWindow(QWidget *parent)
     }
     // mute sounds
     bool checked = muteSoundsCheckBox->isChecked();
-    if(networkManager) { networkManager->setPlay(!checked); }
-
+    if(networkManager) {
+        networkManager->setPlay(!checked);
+        play = !checked;
+    }
+    // play welcome note
+    QTimer::singleShot(1000, this, [this]() {
+    playSound(SoundType::MessageReceived, play);
+    });
 
     // enable logger
     bool enabled = enableLoggerCheckBox->isChecked();

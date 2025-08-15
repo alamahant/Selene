@@ -8,7 +8,7 @@ torprocess.cpp://socket.connectToHost("localhost", 9051);
 networkmanager.cpp:    //proxy.setPort(9050);
 */
 
-const char* APP_VERSION = "1.0.0";
+const char* APP_VERSION = "1.0.2";
 
 int DefaultChatServicePort;
 int DefaultHttpServicePort;
@@ -26,16 +26,16 @@ QString getChatHistoryFilePath() {
 }
 
 QString getFileSaveDirPath() {
-    QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-    return dataDir + QDir::separator() + "files";
-    //return getDocumentsDirPath() + QDir::separator() + "files";
+    //QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    //return dataDir + QDir::separator() + "files";
+    return getDocumentsDirPath() + QDir::separator() + "files";
 
 }
 
 QString getWWWDir() {
-    QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-    return dataDir + QDir::separator() + "www";
-    //return getDocumentsDirPath() + QDir::separator() + "www";
+    //QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    //return dataDir + QDir::separator() + "www";
+    return getDocumentsDirPath() + QDir::separator() + "www";
 }
 
 QString getTorHttpHiddenDirPath(){
@@ -51,8 +51,8 @@ QString getCryptoDirPath(){
 }
 
 QString getContactsDirPath(){
-    return getAppDataDir() + QDir::separator() + "contacts";
-    //return getDocumentsDirPath() + QDir::separator() + "contacts";
+    //return getAppDataDir() + QDir::separator() + "contacts";
+    return getDocumentsDirPath() + QDir::separator() + "contacts";
 }
 
 QString getTorrcDirPath(){
@@ -62,6 +62,7 @@ QString getTorrcDirPath(){
 QString getConfigDirPath(){
     return QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);;
 }
+
 QString getDocumentsDirPath(){
     return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QDir::separator() + "Selene";
 }

@@ -15,8 +15,8 @@ finish-args:
   # Files to be shared with the Http server will live under ~/Documents/Selene/www, and also contact files under ~/Documents/Selene/contacts.
   # Contact files are essential in order to add peers. This will facilitate ease of operation for the user, so that they dont need to dig
   # deep inside ~/.var to locate their files.
-#  - --filesystem=xdg-documents
-#  - --env=QT_QPA_PLATFORM=wayland;xcb # ensure both Wayland/X11 work
+  - --filesystem=xdg-documents
+
 
 modules:
   - name: Selene
@@ -38,4 +38,4 @@ modules:
       # Main application source
       - type: git
         url: https://github.com/alamahant/Selene.git
-        tag: v1.0.1
+        tag: v1.0.2
