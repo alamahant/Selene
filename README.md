@@ -8,9 +8,10 @@ It enables secure, private communication and seamless file transfers between use
 ## 🚀 Distribution
 
 - **Flatpak:**  
-  The initial release of Selene will be available on [Flathub](https://flathub.org/).
+- [Flatpak](https://flathub.org/en/apps/io.github.alamahant.Selene)
+
 - **AppImage & Windows:**  
-  Releases for AppImage (Linux) and Windows will follow in the future.
+- [Linux AppImage and Windows Deploy](https://github.com/alamahant/Selene/releases/latest)
 
 ---
 
