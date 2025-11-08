@@ -31,6 +31,7 @@ QString getCryptoDirPath();
 QString getTorrcDirPath();
 QString getConfigDirPath();
 QString getDocumentsDirPath();
+QString getDownloadsDirPath();
 
 enum class SoundType {
     Connected,

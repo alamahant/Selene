@@ -11,19 +11,7 @@ finish-args:
   - --socket=pulseaudio
   - --device=dri
   - --share=network
-  # Absolutely Needed access to ~/Documents where Selene will create a folder named "Selene" where essential files will be placed.
-  - --filesystem=xdg-documents
-  # Needed for showing notifications
-#  - --talk-name=org.freedesktop.Notifications
-#  - --talk-name=org.freedesktop.portal.Desktop
-#  - --talk-name=org.freedesktop.portal.Notification
-  # Needed for portals to function correctly
-#  - --filesystem=xdg-run/portal
-#  - --filesystem=xdg-run/xdg-desktop
-#  - --talk-name=org.freedesktop.DBus # allow DBus interaction 
-  # Support for all portals
-  - --env=QT_QPA_PLATFORM=wayland;xcb # ensure both Wayland/X11 work
-#  - --env=XDG_CURRENT_DESKTOP=KDE # forces portal backend to KDE if using KDE
+  - --filesystem=xdg-documents/Selene:create
 
 modules:
   - name: Selene
@@ -45,3 +33,5 @@ modules:
       # Main application source
       - type: dir
         path: .
+        #url: https://github.com/alamahant/Selene.git
+        #tag: v1.0.2

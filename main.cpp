@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     QCoreApplication::setOrganizationName("Selene");
 #endif
     QCoreApplication::setApplicationName("Selene");
-    QCoreApplication::setApplicationVersion("1.0.2");
+    QCoreApplication::setApplicationVersion("1.0.3");
 
     Logger::init();
 
@@ -38,6 +38,7 @@ int main(int argc, char *argv[])
     QDir().mkpath(getConfigDirPath());
     QDir().mkpath(getDocumentsDirPath());
     QDir().mkpath(getWWWDir());
+    QDir().mkpath(getDownloadsDirPath());
 
     QApplication a(argc, argv);
     //a.setQuitOnLastWindowClosed(true);

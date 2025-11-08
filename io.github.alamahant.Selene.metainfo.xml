@@ -83,6 +83,18 @@ Selene is designed for privacy advocates and secure communication enthusiasts, o
 
 <releases>
 
+<release version="1.0.3" date="2025-11-08">
+    <description>
+        <p>New features and improvements:</p>
+        <ul>
+            <li>Full AES file encryption alongside existing RSA message encryption is being developed. However until it is thoroughly tested and fully stabilized, Selene's encryption feature is being rolled back. It will be made available again in a future update.</li>
+            <li>HTTP manager dialog to facilitate downloading of shared/sent files without relying on Tor Browser</li>
+            <li>OBFS4 and WebTunnel bridge support for Tor with manager to handle their configuration</li>
+            <li>Performed code polishes and improvements</li>
+        </ul>
+    </description>
+</release>
+
 <release version="1.0.2" date="2025-08-15">
     <description>
       <p>Changes and improvements:</p>

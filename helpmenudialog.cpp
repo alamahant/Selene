@@ -2,6 +2,7 @@
 #include <QApplication>
 #include"constants.h"
 #include<QString>
+#include<QApplication>
 
 HelpMenuDialog::HelpMenuDialog(HelpType type, QWidget *parent)
     : QDialog(parent)
@@ -106,11 +107,79 @@ QString HelpMenuDialog::getBestPracticesContent()
 {
     return QString();  // TODO: Implement
 }
+/*
+QString HelpMenuDialog::getWhatsNewContent()
+{
+    return QString(R"(
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;"> <h1 style="color: #2c3e50; text-align: center; margin-bottom: 25px;">What's New in Selene</h1><div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px;"> <h2 style="color: #16a085; background: transparent;">Version 1.0.3 - 2025-11-06</h2> <h3 style="color: #2c3e50;">New Features</h3> <ul style="margin: 10px 0 10px 25px;"> <li style="margin-bottom: 8px;"> <strong>Enhanced Encryption:</strong> Full AES file encryption alongside existing RSA message encryption </li> <li style="margin-bottom: 8px;"> <strong>HTTP Client:</strong> New dialog to download shared files directly within Selene without needing Tor Browser </li> <li style="margin-bottom: 8px;"> <strong>Bridge Support:</strong> OBFS4 and WebTunnel bridge configuration manager for enhanced censorship circumvention </li> </ul> <h3 style="color: #2c3e50;">Improvements</h3> <ul style="margin: 10px 0 10px 25px;"> <li>Various code polishes and performance enhancements</li> </ul> </div><div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px;"> <h2 style="color: #16a085; background: transparent;">Version 1.0.2 - 2025-08-15</h2> <h3 style="color: #2c3e50;">Changes</h3> <ul style="margin: 10px 0 10px 25px;"> <li style="margin-bottom: 8px;"> Reverted to using <code>~/Documents/Selene</code> as data location after Flathub permission grant </li> <li style="margin-bottom: 8px;"> Improved mute/unmute functionality including startup welcome tone </li> </ul> </div><div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px;"> <h2 style="color: #16a085; background: transparent;">Version 1.0.1 - 2025-08-13</h2> <h3 style="color: #2c3e50;">Fixes</h3> <ul style="margin: 10px 0 10px 25px;"> <li style="margin-bottom: 8px;"> Corrected DocumentRoot directory for Flatpak sandboxed environment </li> <li style="margin-bottom: 8px;"> Fixed contacts directory path in sandboxed environment </li> </ul> </div><div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px;"> <h2 style="color: #16a085; background: transparent;">Version 1.0.0 - 2025-08-13</h2> <h3 style="color: #2c3e50;">Initial Release</h3> <ul style="margin: 10px 0 10px 25px;"> <li style="margin-bottom: 8px;"> Tor-based peer-to-peer messaging and file sharing </li> <li style="margin-bottom: 8px;"> End-to-end RSA encryption with multiple key lengths </li> <li style="margin-bottom: 8px;"> Ephemeral Tor hidden service HTTP file sharing </li> <li style="margin-bottom: 8px;"> Configurable Tor circuits and ports </li> <li style="margin-bottom: 8px;"> Contact management with import/export functionality </li> <li style="margin-bottom: 8px;"> Rich messaging features including emojis and file transfers </li> <li style="margin-bottom: 8px;"> Advanced logging system and chat history management </li> <li style="margin-bottom: 8px;"> Password protection at startup </li> <li style="margin-bottom: 8px;"> Cross-platform Qt interface </li> </ul> </div><div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;"> <p style="margin: 0; color: #856404;"> <strong>Note:</strong> The enhanced encryption feature has temporarily been rolled back until it is stabilized and extended to cover both chat messages and sent/shared files. It will be made available again in a future update. </p> </div></div> )");
+}
+*/
 
 QString HelpMenuDialog::getWhatsNewContent()
 {
-    return QString();  // TODO: Implement
+    return QString(R"(
+<div style="font-family: Arial, sans-serif; line-height: 1.6;">
+<h1 style="color: #2c3e50; text-align: center; margin-bottom: 25px;">What's New in Selene</h1>
+
+<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+<h2 style="color: #16a085; background: transparent;">Version 1.0.3 - 2025-11-08</h2>
+<h3 style="color: #2c3e50;">New Features</h3>
+<ul style="margin: 10px 0 10px 25px;">
+<li style="margin-bottom: 8px;"><strong>Enhanced Encryption:</strong> Full AES file encryption alongside existing RSA message encryption is being developed.
+However until it is fully stabilized, the encryption feature of Selene is beint temporarily rolled back.
+It will be made available again in a future update, after it has thoroughly been tested both for messages and shared files.</li>
+<li style="margin-bottom: 8px;"><strong>HTTP Client:</strong> New dialog to download shared files directly within Selene without needing Tor Browser</li>
+<li style="margin-bottom: 8px;"><strong>Bridge Support:</strong> OBFS4 and WebTunnel bridge configuration manager for enhanced censorship circumvention</li>
+</ul>
+<h3 style="color: #2c3e50;">Improvements</h3>
+<ul style="margin: 10px 0 10px 25px;">
+<li>Various code polishes and performance enhancements</li>
+</ul>
+</div>
+
+<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+<h2 style="color: #16a085; background: transparent;">Version 1.0.2 - 2025-08-15</h2>
+<h3 style="color: #2c3e50;">Changes</h3>
+<ul style="margin: 10px 0 10px 25px;">
+<li style="margin-bottom: 8px;">Reverted to using <code>~/Documents/Selene</code> as data location after Flathub permission grant</li>
+<li style="margin-bottom: 8px;">Improved mute/unmute functionality including startup welcome tone</li>
+</ul>
+</div>
+
+<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+<h2 style="color: #16a085; background: transparent;">Version 1.0.1 - 2025-08-13</h2>
+<h3 style="color: #2c3e50;">Fixes</h3>
+<ul style="margin: 10px 0 10px 25px;">
+<li style="margin-bottom: 8px;">Corrected DocumentRoot directory for Flatpak sandboxed environment</li>
+<li style="margin-bottom: 8px;">Fixed contacts directory path in sandboxed environment</li>
+</ul>
+</div>
+
+<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+<h2 style="color: #16a085; background: transparent;">Version 1.0.0 - 2025-08-13</h2>
+<h3 style="color: #2c3e50;">Initial Release</h3>
+<ul style="margin: 10px 0 10px 25px;">
+<li style="margin-bottom: 8px;">Tor-based peer-to-peer messaging and file sharing</li>
+<li style="margin-bottom: 8px;">End-to-end RSA encryption with multiple key lengths</li>
+<li style="margin-bottom: 8px;">Ephemeral Tor hidden service HTTP file sharing</li>
+<li style="margin-bottom: 8px;">Configurable Tor circuits and ports</li>
+<li style="margin-bottom: 8px;">Contact management with import/export functionality</li>
+<li style="margin-bottom: 8px;">Rich messaging features including emojis and file transfers</li>
+<li style="margin-bottom: 8px;">Advanced logging system and chat history management</li>
+<li style="margin-bottom: 8px;">Password protection at startup</li>
+<li style="margin-bottom: 8px;">Cross-platform Qt interface</li>
+</ul>
+</div>
+
+<div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107;">
+<p style="margin: 0; color: #856404;">
+<strong>Note:</strong> The enhanced encryption feature has temporarily been rolled back until it is stabilized and extended to cover both chat messages and sent/shared files. It will be made available again in a future update.
+</p>
+</div>
+</div>
+)");
 }
+
 
 QString HelpMenuDialog::getShortcutsContent()
 {
@@ -154,7 +223,7 @@ Made with ❤️ for privacy advocates and secure communication enthusiasts
 </p>
 </div>
 </div>
-)").arg(APP_VERSION);
+)").arg(QApplication::applicationVersion());
 }
 
 QString HelpMenuDialog::getFeaturesContent()
@@ -181,6 +250,10 @@ QString HelpMenuDialog::getFeaturesContent()
 <li style="background: transparent;"><strong>Factory Reset:</strong> Restore the app to its original state with a single action. All data is wiped except for contacts and shared files stored in 'contacts' directory.</li>
 <li style="background: transparent;"><strong>Quick Access Toolbar:</strong> Convenient toolbar buttons allow instant copying of your chat onion, HTTP onion, and shared directory paths to the clipboard.</li>
 <li style="background: transparent;"><strong>Chat History Management:</strong> Easily clear chat messages and history per peer or for all peers. Optionally enable automatic history cleaning at app startup for enhanced privacy.</li>
+
+<li style="background: transparent;"><strong>HTTP Client:</strong> Click the Chrome-like icon in the toolbar to open the HTTP Client dialog. Paste received URLs to view and download shared files directly within Selene, eliminating the need for external tools.</li>
+<li style="background: transparent;"><strong>Bridge Manager:</strong> Use the shield icon in the toolbar to open the Tor Bridge Manager. Paste obfs4 or webtunnel bridges obtained from Tor Browser to enable censorship circumvention and access the Tor network.</li>
+
 <li style="background: transparent;">
 <strong>Password Protection at Startup:</strong>
 Enhance your privacy with optional password protection. When enabled, Selene requires a master password at startup to access your data. The system supports secure password creation, change, and validation, with robust SHA-256 hashing and salting. After multiple failed attempts, users can choose to exit or perform a factory reset. Password protection can be enabled or disabled at any time for flexible security management.
@@ -373,6 +446,26 @@ Find contacts instantly with a powerful search bar:
 </div>
 
 <div style="background: transparent; padding: 15px; border-radius: 8px; margin-bottom: 25px;">
+<h2 style="color: #16a085; background: transparent;">9. HTTP Client for File Downloads</h2>
+<ul style="margin: 10px 0 10px 25px;">
+ <li> Use the <strong>Chrome-like icon</strong> in the toolbar to open the HTTP Client dialog. </li>
+ <li> Paste the URL you received from your peer into the address bar and navigate to it. </li>
+<li> View and download shared files directly within Selene, eliminating the need for external tools like Tor Browser.
+</li>
+</ul>
+</div>
+
+<div style="background: transparent; padding: 15px; border-radius: 8px; margin-bottom: 25px;">
+<h2 style="color: #16a085; background: transparent;">10. Bridge Manager for Censorship Circumvention</h2>
+ <ul style="margin: 10px 0 10px 25px;">
+<li> Click the <strong>shield icon</strong> in the toolbar to open the Tor Bridge Manager dialog. </li>
+<li> Obtain obfs4 or webtunnel bridges from Tor Project website or other trusted sources. </li>
+<li> Paste your bridge configurations into the manager to enable Tor network access and circumvent censorship.
+</li>
+</ul>
+</div>
+
+<div style="background: transparent; padding: 15px; border-radius: 8px; margin-bottom: 25px;">
 <h2 style="color: #2c3e50; background: transparent;">Tips & Best Practices</h2>
 <ul style="margin: 10px 0 10px 25px;">
 <li>
@@ -409,7 +502,7 @@ Find contacts instantly with a powerful search bar:
 
 
 <div style="background: transparent; padding: 15px; border-radius: 8px; margin-bottom: 25px;">
-<h2 style="color: #2c3e50; background: transparent;">Colohon: The Selene Philosophy</h2>
+<h2 style="color: #2c3e50; background: transparent;">Colophon: The Selene Philosophy</h2>
 <ul style="margin: 10px 0 10px 25px;">
 <li>
 When we, the developers, started working on Selene, what we found most appealing about using Tor as a medium for a chat application is that it is truly <strong>peer-to-peer</strong>: no need for central servers, no need to open ports in routers or firewalls. This simplicity and directness was incredibly attractive—no STUN, no NAT traversal, no complicated setup.

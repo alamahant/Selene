@@ -3,17 +3,14 @@
 **Selene** is a comprehensive peer-to-peer chat and file sharing application built on the Tor network.  
 It enables secure, private communication and seamless file transfers between users, leveraging the anonymity and resilience of Tor.
 
-![Selene Screenshot](screenshots/Selene-Chatting-in-action.png)
-
 ---
 
 ## 🚀 Distribution
 
 - **Flatpak:**  
-- [Flatpak](https://flathub.org/en/apps/io.github.alamahant.Selene)
-
+  The initial release of Selene will be available on [Flathub](https://flathub.org/).
 - **AppImage & Windows:**  
-- [Linux AppImage and Windows Deploy](https://github.com/alamahant/Selene/releases/latest)
+  Releases for AppImage (Linux) and Windows will follow in the future.
 
 ---
 

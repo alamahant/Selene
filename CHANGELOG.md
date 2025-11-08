@@ -2,6 +2,16 @@
 
 All notable changes to Selene will be documented in this file.
 
+## [1.0.3] - 2025-11-08
+### Added
+- Full AES file encryption alongside existing RSA message encryption is being developed.
+  However until it is thorougly tested and fully stabilized, Selene's encryption fetaure is being rolled back.
+  It will be made available again in a future update.
+- HTTP manager dialog to facilitate downloading of shared/sent files without relying on Tor Browser
+- OBFS4 and WebTunnel bridge support for Tor with manager to handle their configuration
+### Changed
+- Performed code polishes and improvements
+
 ## [1.0.2] - 2025-08-15
 ### Changed
 - Reverted back to using `~/Documents/Selene` as Selene's data location after Flathub graciously granted the `--filesystem=xdg-documents` permission

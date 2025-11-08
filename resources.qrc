@@ -34,5 +34,7 @@
         <file>icons/eye.svg</file>
         <file>icons/file-plus.svg</file>
         <file>icons/navigation.svg</file>
+        <file>icons/chrome.svg</file>
+        <file>icons/shield.svg</file>
     </qresource>
 </RCC>

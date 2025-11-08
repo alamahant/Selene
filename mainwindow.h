@@ -32,7 +32,6 @@
 #include<QSoundEffect>
 #include"constants.h"
 #include<QMenuBar>
-#include"crypto.h"
 #include<QCheckBox>
 #include<QComboBox>
 #include<QDragEnterEvent>
@@ -40,6 +39,8 @@
 #include"logviewerdialog.h"
 #include<QEvent>
 #include"securitymanager.h"
+#include"httpclientdialog.h"
+#include"bridgemanagerdialog.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -207,19 +208,16 @@ private:
     QAction* muteAction;
     QAction *actionTorBridge;
     QAction *getContactsDirPathAction;
+    QAction *openHttpClientAction;
+    QAction *openBridgeDialogAction;
 
     void setupActions();
     QComboBox* rsaBitsCombo;
     QComboBox* statusCombo;
 
     //crypto
-    Crypto crypt;
-    QString encryptMessageForPeer(const QString& peerOnion, const QString& plainText);
-    QString decryptMessageFromPeer(const QString& peerOnion, const QString& encryptedBase64);
-    QCheckBox* encryptCheckBox;
+
 private slots:
-    void onEncryptToggled(bool checked);
-    void onCreateNewKeypair();
     void exportMyInfo();
 private:
     QWidget* dockContent = nullptr;
@@ -250,6 +248,8 @@ private:
     void updateBubbleFontSizes();
     QComboBox *fontSizeCombo = nullptr;
     void addFontSizeCombo();
+    HttpClientDialog *httpClientDialog = nullptr;
+    BridgeManagerDialog *bridgeDialog = nullptr;
 public:
 };
 

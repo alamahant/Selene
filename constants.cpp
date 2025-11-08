@@ -67,6 +67,10 @@ QString getDocumentsDirPath(){
     return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QDir::separator() + "Selene";
 }
 
+QString getDownloadsDirPath(){
+    return getDocumentsDirPath() + QDir::separator() + "Downloads";
+}
+
 QString soundResourcePath(SoundType type) {
     switch (type) {
     case SoundType::Connected:

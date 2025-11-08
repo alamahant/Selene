@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 #flathub
 option(FLATHUB_BUILD "Build for Flathub/Flatpak" OFF)
+option(BUILD_CURL "Build Curl" OFF)
 
 if(FLATHUB_BUILD)
   # Set source directories (these will exist in the Flatpak build sandbox)
@@ -110,6 +111,49 @@ if(FLATHUB_BUILD)
 
   # Set Tor executable path for your project
   set(TOR_EXECUTABLE "${CMAKE_INSTALL_PREFIX}/bin/tor" CACHE PATH "Path to Tor executable")
+
+#curl
+if(BUILD_CURL)
+
+  set(CURL_SRC_DIR "${CMAKE_SOURCE_DIR}/curl_src")
+
+  if(EXISTS ${CURL_SRC_DIR})
+    execute_process(
+      COMMAND autoreconf -fi
+      WORKING_DIRECTORY ${CURL_SRC_DIR}
+      RESULT_VARIABLE CURL_AUTORECONF_RESULT
+    )
+
+    execute_process(
+      COMMAND ./configure --prefix=${CMAKE_INSTALL_PREFIX}
+                          #--disable-shared
+                          #--enable-static
+                          --with-openssl
+                          #--without-zlib
+      WORKING_DIRECTORY ${CURL_SRC_DIR}
+      RESULT_VARIABLE CURL_CONFIGURE_RESULT
+    )
+
+
+  execute_process(
+    COMMAND make
+    WORKING_DIRECTORY ${CURL_SRC_DIR}
+    RESULT_VARIABLE CURL_MAKE_RESULT
+  )
+  if(NOT CURL_MAKE_RESULT EQUAL 0)
+    message(FATAL_ERROR "Failed to build curl")
+  endif()
+
+    execute_process(
+
+      COMMAND make install
+      WORKING_DIRECTORY ${CURL_SRC_DIR}
+      RESULT_VARIABLE CURL_MAKE_RESULT
+    )
+  set(CURL_EXECUTABLE "${CMAKE_INSTALL_PREFIX}/bin/curl" CACHE PATH "Path to curl executable")
+endif()
+endif()
+#curl
 endif()
 #end flathub
 
@@ -152,13 +196,15 @@ find_package(OpenSSL REQUIRED)
         resources.qrc
         simplehttpfileserver.h simplehttpfileserver.cpp
         constants.cpp
-        crypto.h crypto.cpp
         chatmessage.h chatmessage.cpp
         chatsession.h chatsession.cpp
         logviewerdialog.h logviewerdialog.cpp
         helpmenudialog.cpp helpmenudialog.h
         securitymanager.cpp securitymanager.h
         Notification.h
+        donationdialog.cpp donationdialog.h
+        httpclientdialog.h httpclientdialog.cpp
+        bridgemanagerdialog.h bridgemanagerdialog.cpp
 
     )
 # Define target properties for Android with Qt 6 as:

@@ -5,6 +5,7 @@
 #include <QFileInfo>
 #include <QDateTime>
 #include <QDebug>
+#include<QUrl>
 
 SimpleHttpFileServer::SimpleHttpFileServer(const QString& directory, int port, QObject* parent)
     : QObject(parent), m_directory(directory), m_port(port), m_running(false), m_server(nullptr)
@@ -95,7 +96,7 @@ void SimpleHttpFileServer::onReadyRead()
     m_buffers.remove(socket);
 }
 
-
+/*
 void SimpleHttpFileServer::handleRequest(QTcpSocket* socket)
 {
     QByteArray request = m_buffers.value(socket);
@@ -133,6 +134,50 @@ void SimpleHttpFileServer::handleRequest(QTcpSocket* socket)
         sendNotFound(socket);
     }
 }
+*/
+//handlerequest version that protects against spaces in filenames
+void SimpleHttpFileServer::handleRequest(QTcpSocket* socket)
+{
+    QByteArray request = m_buffers.value(socket);
+    QTextStream stream(request);
+    QString line = stream.readLine();
+    QString method, path;
+    QTextStream lineStream(&line);
+    lineStream >> method >> path;
+
+    if (method != "GET") {
+        sendNotFound(socket);
+        return;
+    }
+
+    // FIX: URL decode the path before using it!
+    QString decodedPath = QUrl::fromPercentEncoding(path.toUtf8());
+
+    if (decodedPath.contains("..")) {
+        sendNotFound(socket);
+        return;
+    }
+
+    // Use the DECODED path to find the file
+    QString requestedPath = QDir::cleanPath(m_directory + "/" + decodedPath);
+    QString baseDir = QDir(m_directory).absolutePath();
+
+    if (!requestedPath.startsWith(baseDir)) {
+        sendNotFound(socket);
+        return;
+    }
+
+    QFileInfo info(requestedPath);
+
+    if (info.isDir()) {
+        sendDirectoryListing(socket, requestedPath);
+    } else if (info.isFile()) {
+        sendFile(socket, requestedPath);
+    } else {
+        sendNotFound(socket);
+    }
+}
+
 
 void SimpleHttpFileServer::sendDirectoryListing(QTcpSocket* socket, const QString& dirPath)
 {
@@ -154,8 +199,12 @@ void SimpleHttpFileServer::sendDirectoryListing(QTcpSocket* socket, const QStrin
 
     for (const QString& file : files) {
         QString fileUrl = "/" + relativePath + file;  // Correct URL for subdir files
+        // protect against spaces in urls
+        QString encodedFileUrl = QUrl::toPercentEncoding(fileUrl, "/");
         html += QString("<li><a href=\"%1\">%2</a></li>")
-                    .arg(fileUrl.toHtmlEscaped(), file.toHtmlEscaped());
+                   .arg(encodedFileUrl.toHtmlEscaped(), file.toHtmlEscaped());
+
+                   // .arg(fileUrl.toHtmlEscaped(), file.toHtmlEscaped());
     }
 
     html += "</ul></body></html>";
