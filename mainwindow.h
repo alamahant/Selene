@@ -32,6 +32,7 @@
 #include<QSoundEffect>
 #include"constants.h"
 #include<QMenuBar>
+#include"crypto.h"
 #include<QCheckBox>
 #include<QComboBox>
 #include<QDragEnterEvent>
@@ -216,8 +217,13 @@ private:
     QComboBox* statusCombo;
 
     //crypto
-
+    Crypto crypt;
+    QString encryptMessageForPeer(const QString& peerOnion, const QString& plainText);
+    QString decryptMessageFromPeer(const QString& peerOnion, const QString& encryptedBase64);
+    QCheckBox* encryptCheckBox;
 private slots:
+    void onEncryptToggled(bool checked);
+    void onCreateNewKeypair();
     void exportMyInfo();
 private:
     QWidget* dockContent = nullptr;
@@ -249,6 +255,7 @@ private:
     QComboBox *fontSizeCombo = nullptr;
     void addFontSizeCombo();
     HttpClientDialog *httpClientDialog = nullptr;
+    QString encryptFileForPeer(const QString &filePath, const QString &peerOnion);
     BridgeManagerDialog *bridgeDialog = nullptr;
 public:
 };

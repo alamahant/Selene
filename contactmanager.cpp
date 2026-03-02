@@ -65,16 +65,7 @@ bool ContactManager::isBlocked(const QString& onion) const
 {
     return contacts.contains(onion) && contacts[onion].isBlocked;
 }
-/*
-void ContactManager::setBlocked(const QString& onion, bool blocked)
-{
-    if (contacts.contains(onion)) {
-        contacts[onion].isBlocked = blocked;
-        saveContacts();
-        Logger::log(Logger::INFO, QString("Contact %1 %2").arg(onion).arg(blocked ? "blocked" : "unblocked"));
-    }
-}
-*/
+
 
 void ContactManager::setBlocked(const QString& onion, bool blocked) {
     if (contacts.contains(onion)) {
@@ -103,6 +94,7 @@ void ContactManager::saveContacts() const {
         QJsonObject contactObj;
         contactObj["friendlyName"] = it.value().friendlyName;
         contactObj["publicKey"] = it.value().publicKey;
+        contactObj["encryptionEnabled"] = it.value().encryptionEnabled;
         contactObj["isBlocked"] = it.value().isBlocked;
         contactObj["comments"] = it.value().comments;
         root[it.key()] = contactObj;
@@ -128,6 +120,7 @@ void ContactManager::loadContacts()
             Contact contact(onion, contactObj["friendlyName"].toString());
             contact.isBlocked = contactObj["isBlocked"].toBool();
             contact.publicKey = contactObj["publicKey"].toString();
+            contact.encryptionEnabled = contactObj["encryptionEnabled"].toBool();
 
             contact.comments = contactObj["comments"].toString();  // Added this line
 

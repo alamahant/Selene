@@ -1,5 +1,6 @@
 #include "httpclientdialog.h"
 #include<QRegularExpression>
+#include "crypto.h"
 
 HttpClientDialog::HttpClientDialog(QWidget *parent)
     : QDialog(parent)
@@ -307,12 +308,29 @@ void HttpClientDialog::downloadFinished(const QString& fileName, int exitCode, Q
             actionButton->setText("Done");
             actionButton->setEnabled(false);
 
-            // Regular file download success
-            QMessageBox::information(this, "Download Complete",
-                                   QString("'%1' downloaded to:\n%2")
-                                     .arg(fileName)
+            // MINIMAL ADDITION: Auto-decrypt .encbundle files
+            if (fileName.endsWith(".encbundle")) {
+                QString downloadDir = getDownloadsDirPath();
+                QString encryptedPath = downloadDir + QDir::separator() + fileName;
+                QString decryptedPath = encryptedPath;
+                decryptedPath.replace(".encbundle", ""); // Remove .encbundle extension
 
-                                     .arg(getDownloadsDirPath()));
+                if (decryptDownloadedFile(encryptedPath, decryptedPath)) {
+                    QMessageBox::information(this, "File Decrypted",
+                                           QString("File automatically decrypted to:\n%1").arg(decryptedPath));
+                } else {
+                    QMessageBox::warning(this, "Decryption Failed",
+                                       QString("Failed to decrypt file:\n%1").arg(encryptedPath));
+                }
+            } else {
+                            // Regular file download success
+                            QMessageBox::information(this, "Download Complete",
+                                                   QString("'%1' downloaded to:\n%2")
+                                                     .arg(fileName)
+
+                                                     .arg(getDownloadsDirPath()));
+                        }
+
         } else {
             progressBar->setVisible(false);
             actionButton->setText("Download");
@@ -326,6 +344,75 @@ void HttpClientDialog::downloadFinished(const QString& fileName, int exitCode, Q
 //AES
 
 
+bool HttpClientDialog::decryptDownloadedFile(const QString &encryptedBundlePath, const QString &destPath)
+{
+
+    QFile file(encryptedBundlePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "❌ Failed to open bundle file";
+        return false;
+    }
+
+
+    QDataStream in(&file);
+    in.setVersion(QDataStream::Qt_6_0);
+
+    // 1. Read encrypted AES key
+    quint32 aesKeySize;
+    in >> aesKeySize;
+
+    QByteArray encryptedAESKey(aesKeySize, 0);
+    int bytesRead1 = in.readRawData(encryptedAESKey.data(), aesKeySize);
+
+    // 2. Read IV
+    quint32 ivSize;
+    in >> ivSize;
+
+    QByteArray iv(ivSize, 0);
+    int bytesRead2 = in.readRawData(iv.data(), ivSize);
+
+    // 3. Read encrypted file data
+    quint32 encryptedFileSize;
+    in >> encryptedFileSize;
+
+    QByteArray encryptedFileData(encryptedFileSize, 0);
+    int bytesRead3 = in.readRawData(encryptedFileData.data(), encryptedFileSize);
+
+    // Check if we read everything correctly
+    if (bytesRead1 != aesKeySize || bytesRead2 != ivSize || bytesRead3 != encryptedFileSize) {
+        qWarning() << "❌ Failed to read all data from bundle";
+        return false;
+    }
+
+
+    // 4. Decrypt AES key using our private key (RSA decryption)
+    QByteArray aesKey;
+    if (!crypt.decrypt(encryptedAESKey, aesKey)) {
+        qWarning() << "❌ Failed to decrypt AES key with RSA";
+        return false;
+    }
+
+    // 5. Decrypt file data using AES decryption
+    QByteArray decryptedFileData = crypt.decryptAES(encryptedFileData, aesKey, iv);
+    if (decryptedFileData.isEmpty()) {
+        qWarning() << "❌ Failed to decrypt file data with AES";
+        return false;
+    }
+
+    // 6. Save decrypted file
+    QFile outFile(destPath);
+    if (!outFile.open(QIODevice::WriteOnly)) {
+        qWarning() << "❌ Failed to open output file";
+        return false;
+    }
+    qint64 bytesWritten = outFile.write(decryptedFileData);
+    outFile.close();
+
+    // 7. Clean up the encrypted bundle
+    file.remove();
+
+    return true;
+}
 
 
 void HttpClientDialog::resetAll()

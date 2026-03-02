@@ -17,6 +17,7 @@
 #include <QStandardPaths>
 #include <QHash>
 #include"constants.h"
+#include"crypto.h"
 
 class HttpClientDialog : public QDialog
 {
@@ -53,6 +54,7 @@ private:
     QHash<QString, QPushButton*> actionButtons;
     QString bindIP = "127.0.0.1:" + QString::number(DefaultProxyPort);
     bool decryptDownloadedFile(const QString &encryptedBundlePath, const QString &destPath);
+    Crypto crypt;
     QPushButton *resetButton;
     QPushButton *downloadSelectedButton;
 };

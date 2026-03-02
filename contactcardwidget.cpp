@@ -262,10 +262,3 @@ bool ContactCardWidget::getIsBlocked() const
 {
     return isBlocked;
 }
-/*
-void ContactCardWidget::updateStatus(bool available)
-{
-    isAvailable = available;
-    updateStatusDisplay();
-}
-*/

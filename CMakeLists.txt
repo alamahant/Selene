@@ -196,6 +196,7 @@ find_package(OpenSSL REQUIRED)
         resources.qrc
         simplehttpfileserver.h simplehttpfileserver.cpp
         constants.cpp
+        crypto.h crypto.cpp
         chatmessage.h chatmessage.cpp
         chatsession.h chatsession.cpp
         logviewerdialog.h logviewerdialog.cpp

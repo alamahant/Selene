@@ -31,12 +31,7 @@ MessageBubbleWidget::MessageBubbleWidget(const ChatMessage& message, const QStri
     }else{
         senderLabel = nullptr;
     }
-    // Optionally, show "Me" for your own messages:
-    // else {
-    //     QLabel* senderLabel = new QLabel(senderName, this);
-    //     senderLabel->setStyleSheet("font-size: 11px; color: #888;");
-    //     verticalLayout->addWidget(senderLabel, 0, Qt::AlignRight);
-    // }
+
 
     // Create bubble container
     QFrame* bubbleContainer = new QFrame(this);

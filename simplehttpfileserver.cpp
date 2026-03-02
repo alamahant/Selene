@@ -96,45 +96,6 @@ void SimpleHttpFileServer::onReadyRead()
     m_buffers.remove(socket);
 }
 
-/*
-void SimpleHttpFileServer::handleRequest(QTcpSocket* socket)
-{
-    QByteArray request = m_buffers.value(socket);
-    QTextStream stream(request);
-    QString line = stream.readLine();
-    QString method, path;
-    QTextStream lineStream(&line);
-    lineStream >> method >> path;
-
-    if (method != "GET") {
-        sendNotFound(socket);
-        return;
-    }
-
-    if (path.contains("..")) {
-        sendNotFound(socket);
-        return;
-    }
-
-    QString requestedPath = QDir::cleanPath(m_directory + "/" + path);
-    QString baseDir = QDir(m_directory).absolutePath();
-
-    if (!requestedPath.startsWith(baseDir)) {
-        sendNotFound(socket);
-        return;
-    }
-
-    QFileInfo info(requestedPath);
-
-    if (info.isDir()) {
-        sendDirectoryListing(socket, requestedPath);
-    } else if (info.isFile()) {
-        sendFile(socket, requestedPath);
-    } else {
-        sendNotFound(socket);
-    }
-}
-*/
 //handlerequest version that protects against spaces in filenames
 void SimpleHttpFileServer::handleRequest(QTcpSocket* socket)
 {

@@ -1,12 +1,6 @@
 #include"constants.h"
 
-/* hardcoded tor pports in case we need to revert to static ports
-main.cpp:    //TorProcess::killExistingTorProcesses();
-networkmanager.cpp:    //bool success = server->listen(QHostAddress::LocalHost, 8080);
-mainwindow.cpp:    //httpServer = new SimpleHttpFileServer(docRootPath, 9090, this);
-torprocess.cpp://socket.connectToHost("localhost", 9051);
-networkmanager.cpp:    //proxy.setPort(9050);
-*/
+
 
 const char* APP_VERSION = "1.0.2";
 

@@ -100,14 +100,7 @@ void ContactListWidget::addContact(const Contact& contact)
 }
 
 
-/*
-void ContactListWidget::updateContactStatus(const QString& onionAddress, bool available)
-{
-    if (contactCards.contains(onionAddress)) {
-                contactCards[onionAddress]->updateStatus(available);
-    }
-}
-*/
+
 
 
 void ContactListWidget::updateContactLastSeen(const QString& onionAddress, const QDateTime& lastSeen)

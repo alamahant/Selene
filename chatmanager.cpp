@@ -412,21 +412,6 @@ void ChatManager::renderMessageToScrollArea(const QString& peerAddress, QScrollA
     if (!chatSessions.contains(peerAddress)) {
         return;
     }
-    /*
-    // Get the chat widget (already created by tab logic)
-    QWidget* chatWidget = scrollArea->widget();
-    if (!chatWidget) {
-        // Should not happen if tab creation logic is correct
-        return;
-    }
-
-    // Get the layout (already created by tab logic)
-    QVBoxLayout* layout = qobject_cast<QVBoxLayout*>(chatWidget->layout());
-    if (!layout) {
-        // Should not happen if tab creation logic is correct
-        return;
-    }
-    */
 
     // better version to create widget and layout if not present the very first time we add a contact.
     // Get or create the chat widget

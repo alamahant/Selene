@@ -2,6 +2,19 @@
 
 All notable changes to Selene will be documented in this file.
 
+## [1.0.4] - 2026-03-02
+
+### Technical Updates
+- **Updated KDE Runtime**:
+  - Upgraded KDE Flatpak runtime to version 6.10 for improved performance and compatibility
+  - Ensures better system integration and future-proof security
+
+### Added
+- **Full encryption features reintroduced**:
+  - Up to RSA 8192-bit encryption for secure message exchange
+  - AES-256 encryption for file protection
+  - End-to-end encryption fully operational for all communications
+
 ## [1.0.3] - 2025-11-08
 ### Added
 - Full AES file encryption alongside existing RSA message encryption is being developed.
