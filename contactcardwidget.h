@@ -77,7 +77,10 @@ public:
     void updateCardDisplay(const QString &friendlyName);
 private:
     QTimer* offlineTimer = nullptr;
-
+public:
+    QString getGroup() const { return group; }
+private:
+    QString group;
 };
 
 #endif // CONTACTCARDWIDGET_H

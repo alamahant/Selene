@@ -11,6 +11,7 @@ finish-args:
   - --socket=pulseaudio
   - --device=dri
   - --share=network
+  - --filesystem=xdg-download:ro
   - --filesystem=xdg-documents/Selene:create
 
 modules:
@@ -33,7 +34,7 @@ modules:
       # Main application source
       - type: git
         url: https://github.com/alamahant/Selene.git
-        tag: v1.0.4
+        tag: v1.0.5
 
     cleanup:
       - /include

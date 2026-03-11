@@ -12,6 +12,7 @@ public:
     QDateTime lastSeen;
     QString publicKey;
     bool encryptionEnabled = false;
+    QString group;
 
     Contact(const QString& onion = "", const QString& name = "") :
         onionAddress(onion),

@@ -83,6 +83,28 @@ MessageBubbleWidget::MessageBubbleWidget(const ChatMessage& message, const QStri
         mainLayout->addStretch();
     }
 
+    //
+    this->setContextMenuPolicy(Qt::DefaultContextMenu);
+
+    // Set stylesheet for the context menu
+    QString lightMenuStyle =
+        "QMenu {"
+        "   background-color: #ffffff;"
+        "   border: 1px solid #c0c0c0;"
+        "   color: #000000;"
+        "}"
+        "QMenu::item {"
+        "   background-color: transparent;"
+        "   padding: 2px 16px 2px 16px;"  // Minimal padding
+        "   color: #000000;"
+        "}"
+        "QMenu::item:selected {"
+        "   background-color: #e0e0e0;"
+        "   color: #000000;"
+        "}";
+    this->setStyleSheet(lightMenuStyle);
+    //
+
     setLayout(mainLayout);
 }
 

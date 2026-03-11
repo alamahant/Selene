@@ -257,7 +257,7 @@ private:
     HttpClientDialog *httpClientDialog = nullptr;
     QString encryptFileForPeer(const QString &filePath, const QString &peerOnion);
     BridgeManagerDialog *bridgeDialog = nullptr;
-public:
+    QLabel* contactGroupLabel;
 };
 
 #endif // MAINWINDOW_H

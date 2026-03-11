@@ -178,6 +178,18 @@ void ContactListWidget::filterContacts(const QString& filter) {
             }
         }
 
+    } else if (filter.startsWith("#g", Qt::CaseInsensitive)) {
+            // Filter by group
+            QString groupFilter = filter.mid(2).trimmed();
+            for (auto card : contactCards) {
+                if (card->getGroup().contains(groupFilter, Qt::CaseInsensitive)) {
+                    contentLayout->insertWidget(contentLayout->count() - 1, card);
+                    card->show();
+                } else {
+                    card->hide();
+                }
+            }
+
     } else {
         // Default: filter by display name
         for (auto card : contactCards) {

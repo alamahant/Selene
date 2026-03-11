@@ -21,10 +21,11 @@ int main(int argc, char *argv[])
 {
 
 #ifndef FLATHUB_BUILD
-    QCoreApplication::setOrganizationName("Selene");
+    QCoreApplication::setOrganizationName("Alamahant");
 #endif
+
     QCoreApplication::setApplicationName("Selene");
-    QCoreApplication::setApplicationVersion("1.0.4");
+    QCoreApplication::setApplicationVersion("1.0.5");
 
     Logger::init();
 

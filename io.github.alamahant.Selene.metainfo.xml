@@ -11,6 +11,7 @@
 <metadata_license>CC0-1.0</metadata_license>
 
 <project_license>GPL-3.0-or-later</project_license>
+<url type="vcs-browser">https://github.com/alamahant/Selene</url>
 
 <description>
 <p>
@@ -83,12 +84,35 @@ Selene is designed for privacy advocates and secure communication enthusiasts, o
 
 <releases>
 
+<release version="1.0.5" date="2026-03-11">
+  <description>
+    <p>Added:</p>
+    <ul>
+      <li>Contact Groups: Added group field to contacts for better organization</li>
+      <li>Enhanced Contact Filtering: New filter syntax #g [text] to search contacts by group</li>
+    </ul>
+
+    <p>UI Improvements:</p>
+    <ul>
+      <li>Context Menu Fix: Fixed invisible menu items with proper light theme styling</li>
+      <li>Header Area Optimization: Made chat header more compact with reduced spacing and margins</li>
+    </ul>
+
+    <p>Technical Updates:</p>
+    <ul>
+      <li>Added xdg-download:ro filesystem permission to Flatpak manifest</li>
+      <li>Added VCS browser URL to metainfo.xml</li>
+    </ul>
+  </description>
+</release>
+
+
     <release version="1.0.4" date="2026-03-02">
       <description>
       <p>Technical Updates:</p>
         <ul>
           <li>Upgraded KDE Flatpak runtime to version 6.10 for improved performance and compatibility</li>
-          
+          <li>Enhanced MistralAPI class with increased token limit for longer AI responses</li>
         </ul>
 
         <p>Encryption Features Restored:</p>
@@ -100,18 +124,6 @@ Selene is designed for privacy advocates and secure communication enthusiasts, o
         </ul>
       </description>
     </release>
-
-<release version="1.0.3" date="2025-11-08">
-    <description>
-        <p>New features and improvements:</p>
-        <ul>
-            <li>Full AES file encryption alongside existing RSA message encryption is being developed. However until it is thoroughly tested and fully stabilized, Selene's encryption feature is being rolled back. It will be made available again in a future update.</li>
-            <li>HTTP manager dialog to facilitate downloading of shared/sent files without relying on Tor Browser</li>
-            <li>OBFS4 and WebTunnel bridge support for Tor with manager to handle their configuration</li>
-            <li>Performed code polishes and improvements</li>
-        </ul>
-    </description>
-</release>
 
 <release version="1.0.2" date="2025-08-15">
     <description>

@@ -14,7 +14,8 @@ ContactCardWidget::ContactCardWidget(const Contact& contact, QWidget *parent)
     isSelected(false),
     isHovered(false),
     isBlocked(contact.isBlocked),// Initialize isBlocked
-    comments(contact.comments)
+    comments(contact.comments),
+    group(contact.group)
 {
     setupUi();
     updateBlockStatus(contact.isBlocked);

@@ -97,6 +97,7 @@ void ContactManager::saveContacts() const {
         contactObj["encryptionEnabled"] = it.value().encryptionEnabled;
         contactObj["isBlocked"] = it.value().isBlocked;
         contactObj["comments"] = it.value().comments;
+        contactObj["group"] = it.value().group;
         root[it.key()] = contactObj;
     }
     QJsonDocument doc(root);
@@ -122,8 +123,8 @@ void ContactManager::loadContacts()
             contact.publicKey = contactObj["publicKey"].toString();
             contact.encryptionEnabled = contactObj["encryptionEnabled"].toBool();
 
-            contact.comments = contactObj["comments"].toString();  // Added this line
-
+            contact.comments = contactObj["comments"].toString();
+            contact.group = contactObj["group"].toString();
             contacts[onion] = contact;
         }
         Logger::log(Logger::INFO, "Contacts loaded from " + contactsFilePath);

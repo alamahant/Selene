@@ -2,6 +2,25 @@
 
 All notable changes to Selene will be documented in this file.
 
+## [1.0.5] - 2026-03-11
+
+### Added
+- **Contact Groups**: Added group field to contacts for better organization
+  - Group information now saved/loaded from JSON
+  - Edit and add contact dialogs include group field
+  - Group displayed in chat header
+
+- **Enhanced Contact Filtering**: New filter syntax `#g [text]` to search contacts by group
+  - Updated filter tooltip with complete syntax: name, #b (blocked), #c (comments), #g (group), #o (onion)
+
+### UI Improvements
+- **Context Menu Fix**: Fixed invisible menu items with proper light theme styling
+- **Header Area Optimization**: Made chat header more compact with reduced spacing and margins
+
+### Technical Updates
+- Added `xdg-download:ro` filesystem permission to Flatpak manifest
+- Added VCS browser URL to metainfo.xml
+
 ## [1.0.4] - 2026-03-02
 
 ### Technical Updates

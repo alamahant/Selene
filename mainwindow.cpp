@@ -56,7 +56,7 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle("Selene - P2P Chat");
     setWindowIcon(QIcon(":/icons/selene.png"));  // Resource or file path
 
-    resize(1150, 700);
+    resize(1150, 750);
     isConnected = false;
     connectedPeerAddress = "";
     contactNameLabel = nullptr;
@@ -206,14 +206,17 @@ void MainWindow::setupChatArea() {
     QWidget* headerWidget = new QWidget(centralWidget);
     headerWidget->setObjectName("chatHeaderWidget");
     headerWidget->setStyleSheet("#chatHeaderWidget { background-color: #f5f5f5; border-radius: 8px; }");
-    headerWidget->setMinimumHeight(100);
+    headerWidget->setMinimumHeight(70);
     QVBoxLayout* headerLayout = new QVBoxLayout(headerWidget);
+
+    headerLayout->setSpacing(2);        // Space between each row (name, address, comments, group, status)
+    headerLayout->setContentsMargins(8, 2, 8, 2);  // left, top, right, bottom
 
     // Contact name (large, bold)
     contactNameLabel = new QLabel("No contact selected", headerWidget);
     QFont nameFont = contactNameLabel->font();
     nameFont.setBold(true);
-    nameFont.setPointSize(nameFont.pointSize() + 2);
+    nameFont.setPointSize(nameFont.pointSize() + 1);
     contactNameLabel->setFont(nameFont);
 
     // Contact address (with copy button)
@@ -234,6 +237,12 @@ void MainWindow::setupChatArea() {
     addressLayout->addWidget(copyAddressBtn);
     addressLayout->addStretch();
 
+    QHBoxLayout* groupLayout = new QHBoxLayout();
+    groupLayout->addWidget(new QLabel("Group:", headerWidget));
+    contactGroupLabel = new QLabel("", headerWidget);
+    contactGroupLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    groupLayout->addWidget(contactGroupLabel, 1);
+
     // Comments section
     QHBoxLayout* commentsLayout = new QHBoxLayout();
     commentsLayout->addWidget(new QLabel("Comments:", headerWidget));
@@ -250,10 +259,12 @@ void MainWindow::setupChatArea() {
     nameLayout->addWidget(contactNameLabel);
     //nameLayout->addWidget(contactStatusDot);
     nameLayout->addStretch();
-    headerLayout->addLayout(nameLayout);
-    headerLayout->addLayout(addressLayout);
-    headerLayout->addLayout(commentsLayout);
-    headerLayout->addWidget(statusLabel);
+
+    headerLayout->addLayout(nameLayout);        // 1. Name first
+    headerLayout->addLayout(addressLayout);     // 2. Address second
+    headerLayout->addLayout(groupLayout);       // 3. Group third
+    headerLayout->addLayout(commentsLayout);    // 4. Comments fourth
+    headerLayout->addWidget(statusLabel);       // 5. Status last
 
     // Connection controls
     QWidget* connectionWidget = new QWidget(centralWidget);
@@ -346,6 +357,7 @@ void MainWindow::setupChatArea() {
         updateStatus("Connected as: " + onion);
     }
 }
+
 
 
 MainWindow::~MainWindow() {
@@ -558,6 +570,13 @@ void MainWindow::onContactSelected(const QString& onionAddress) {
         contactNameLabel->setText("Unknown Contact");
     }
     contactAddressLabel->setText(onionAddress);
+
+    if (!contact.group.isEmpty()) {
+        contactGroupLabel->setText(contact.group);
+    } else {
+        contactGroupLabel->setText("Ungrouped");
+    }
+
     if (!contact.comments.isEmpty()) {
         contactCommentsLabel->setText(contact.comments);
     } else {
@@ -620,7 +639,18 @@ void MainWindow::setupDockWidgets() {
     // Add search box
     searchContactsEdit = new QLineEdit(dockContent);
     searchContactsEdit->setPlaceholderText(tr("🔍 Search contacts"));
+
+    searchContactsEdit->setToolTip(
+        "Contact Filter Syntax:\n\n"
+        "• [text] - Filter by display name\n"
+        "• #b - Show only blocked contacts\n"
+        "• #c [text] - Search in comments\n"
+        "• #g [text] - Search in group\n"  // <-- ADD THIS
+        "• #o [text] - Search in onion address"
+    );
+
     dockLayout->addWidget(searchContactsEdit);
+
 
     // Add contacts list
     contactListWidget = new ContactListWidget(dockContent);
@@ -851,7 +881,7 @@ void MainWindow::switchToTab(const QString& onionAddress) {
 
 void MainWindow::handleEditContact(const QString &onion) {
     onContactSelected(onion);
-    contactListWidget->onContactSelected();  // Add this after
+    contactListWidget->onContactSelected();
 
     QDialog dialog(this);
     QFormLayout form(&dialog);
@@ -861,16 +891,18 @@ void MainWindow::handleEditContact(const QString &onion) {
     QLineEdit* onionInput = new QLineEdit(currentContact.onionAddress, &dialog);
     onionInput->setReadOnly(true);
     QLineEdit* nameInput = new QLineEdit(currentContact.friendlyName, &dialog);
-    //QTextEdit* publicKeyInput = new QTextEdit(currentContact.publicKey, &dialog);
-    QTextEdit* publicKeyInput = new QTextEdit(&dialog);
+    QTextEdit* publicKeyInput = new QTextEdit(currentContact.publicKey, &dialog);
+    //QTextEdit* publicKeyInput = new QTextEdit(&dialog);
+    //publicKeyInput->setPlaceholderText("Current public key not displayed");
     bool encryptionEnabled = currentContact.encryptionEnabled;
     QLineEdit* commentsInput = new QLineEdit(currentContact.comments, &dialog);
+    QLineEdit* groupInput = new QLineEdit(currentContact.group, &dialog);
 
     form.addRow("Onion Address:", onionInput);
     form.addRow("Name:", nameInput);
     form.addRow("Public Key:", publicKeyInput);
-
     form.addRow("Comments:", commentsInput);
+    form.addRow("Group:", groupInput);
 
     QDialogButtonBox buttonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
     form.addRow(&buttonBox);
@@ -882,13 +914,14 @@ void MainWindow::handleEditContact(const QString &onion) {
         Contact updatedContact;
         updatedContact.onionAddress = onionInput->text();
         updatedContact.friendlyName = nameInput->text();
-
         QString newKey = publicKeyInput->toPlainText();
-        updatedContact.publicKey = newKey.isEmpty() ? currentContact.publicKey : newKey;
 
+        updatedContact.publicKey = newKey.isEmpty() ? currentContact.publicKey : newKey;
         //updatedContact.publicKey = publicKeyInput->toPlainText(); // text()
         updatedContact.comments = commentsInput->text();
+        updatedContact.group = groupInput->text();
         updatedContact.encryptionEnabled = encryptionEnabled;
+
         contactManager->updateContact(updatedContact);
         Notification("Contact Updated", "Updated contact: " + updatedContact.friendlyName);
 
@@ -923,7 +956,7 @@ void MainWindow::addContact(const QString &sendersOnion, const QJsonObject &cont
     QLineEdit* nameInput = new QLineEdit(dialog);
     QTextEdit* publicKeyInput = new QTextEdit(dialog);
     QLineEdit* commentsInput = new QLineEdit(dialog);
-
+    QLineEdit* groupInput = new QLineEdit(dialog);
 
 
     onionInput->setMinimumWidth(70 * fontMetrics().horizontalAdvance('X'));
@@ -932,12 +965,16 @@ void MainWindow::addContact(const QString &sendersOnion, const QJsonObject &cont
     nameInput->setPlaceholderText("**Required");
 
     publicKeyInput->setMinimumWidth(70 * fontMetrics().horizontalAdvance('X'));
+
     commentsInput->setMinimumWidth(70 * fontMetrics().horizontalAdvance('X'));
+    groupInput->setMinimumWidth(70 * fontMetrics().horizontalAdvance('X'));
 
     form->addRow("Onion Address:", onionInput);
     form->addRow("Friendly Name:", nameInput);
     form->addRow("Public Key:", publicKeyInput);
     form->addRow("Comments:", commentsInput);
+    form->addRow("Group:", groupInput);
+
     // If called by handleunknown versus manually by clicking on buttgon
     if (!sendersOnion.isEmpty()) {
         onionInput->setText(sendersOnion);
@@ -953,6 +990,8 @@ void MainWindow::addContact(const QString &sendersOnion, const QJsonObject &cont
             publicKeyInput->setPlainText(contact.value("public_key").toString());
         if (contact.contains("comments"))
             commentsInput->setText(contact.value("comments").toString());
+        if (contact.contains("group"))
+            groupInput->setText(contact.value("group").toString());
     }
 
 
@@ -1003,6 +1042,12 @@ void MainWindow::addContact(const QString &sendersOnion, const QJsonObject &cont
             commentsInput->setText(obj.value("comments").toString());
         else
             commentsInput->clear();
+
+        if (obj.contains("group"))
+            groupInput->setText(obj.value("group").toString());
+        else
+            groupInput->clear();
+
     });
 
 
@@ -1045,6 +1090,8 @@ void MainWindow::addContact(const QString &sendersOnion, const QJsonObject &cont
         newContact.publicKey = publicKeyInput->toPlainText();
 
         newContact.comments = commentsInput->text();
+        newContact.group = groupInput->text();
+
         contactManager->addContact(newContact);
         Notification("Contact Added", "Added contact: " + newContact.friendlyName);
 
@@ -1231,6 +1278,7 @@ void MainWindow::updateContactInfo(const QString& onionAddress) {
         contactNameLabel->setText("No contact selected");
         contactAddressLabel->setText("");
         contactCommentsLabel->setText("");
+        contactGroupLabel->setText("");
         //contactStatusDot->setStyleSheet("background-color: #BDBDBD; border-radius: 8px;"); // Light gray
         return;
     }
@@ -1238,6 +1286,8 @@ void MainWindow::updateContactInfo(const QString& onionAddress) {
     // Get contact information from the contact manager
     QString friendlyName = networkManager->getFriendlyName(onionAddress);
     QString comments = "";
+    QString group = "";
+
     // If we have a contact manager with additional info
     ContactManager* contactManager = networkManager->getContactManager();
     if (contactManager) {
@@ -1245,13 +1295,16 @@ void MainWindow::updateContactInfo(const QString& onionAddress) {
         if (!contact.comments.isEmpty()) {
             comments = contact.comments;
         }
+        if (!contact.group.isEmpty()) {
+            group = contact.group;
+        }
     }
 
     // Update the header labels
     contactNameLabel->setText(friendlyName);
     contactAddressLabel->setText(onionAddress);
     contactCommentsLabel->setText(comments);
-
+    contactGroupLabel->setText(group.isEmpty() ? "Ungrouped" : group);
     // Check if this specific peer is connected
     if (networkManager->isPeerConnected(onionAddress)) {
         //contactStatusDot->setStyleSheet("background-color: #4CAF50; border-radius: 8px;"); // Green dot
@@ -1647,7 +1700,7 @@ void MainWindow::sendFile()
     // 7. If encrypted, add a note to the message
     QString messageText = url;
     if (encryptCheckBox->isChecked()) {
-        messageText += "\n[Encrypted files - use decryption to open]";
+        //messageText += "\n[Encrypted files - use decryption to open]";
     }
 
     // 8. Send the URL as a message using your existing sendMessage logic
@@ -2880,7 +2933,22 @@ void MainWindow::setupMainLayoutWithSplitter() {
     // Create splitter
     QSplitter* splitter = new QSplitter(this);
     splitter->setOrientation(Qt::Horizontal);
+    // Make splitter wider and yellow-beige
+    splitter->setHandleWidth(4);  // Increased from default (usually 4-5)
 
+    // Style the splitter with discreet yellow-beige
+    splitter->setStyleSheet(
+        "QSplitter::handle {"
+        "   background-color: #e8d5b5;"  // Discreet yellow-beige
+        "   width: 4px;"                  // Match handle width
+        "}"
+        "QSplitter::handle:hover {"
+        "   background-color: #d4b68a;"   // Slightly darker on hover
+        "}"
+        "QSplitter::handle:pressed {"
+        "   background-color: #c4a076;"   // Even darker when pressed
+        "}"
+    );
     // Setup dock widgets (contactsDock)
     setupDockWidgets(); // This creates contactsDock and dockContent
 
