@@ -1978,6 +1978,17 @@ void MainWindow::setupMenuBar()
         dialog.exec();
     });
 
+    //
+    QAction* changelogAction = new QAction(tr("Changelog"), this);
+    helpMenu->addAction(changelogAction);
+
+    // 2. Connect the About action to show the HelpMenuDialog
+    connect(changelogAction, &QAction::triggered, this, [this]() {
+        HelpMenuDialog dialog(HelpType::WhatsNew, this);
+        dialog.exec();
+    });
+    //
+
     QAction* instructionsAction = new QAction(tr("Instructions"), this);
     helpMenu->addAction(instructionsAction);
 

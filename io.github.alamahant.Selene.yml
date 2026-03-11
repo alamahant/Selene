@@ -11,7 +11,7 @@ finish-args:
   - --socket=pulseaudio
   - --device=dri
   - --share=network
-  - --filesystem=xdg-download:ro
+  - --filesystem=xdg-download:ro # Needed for easy access to downloaded contact files from peers.
   - --filesystem=xdg-documents/Selene:create
 
 modules:

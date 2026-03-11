@@ -108,9 +108,92 @@ QString HelpMenuDialog::getBestPracticesContent()
     return QString();  // TODO: Implement
 }
 
-QString HelpMenuDialog::getWhatsNewContent()
-{
-    return QString();  // TODO: Implement
+QString HelpMenuDialog::getWhatsNewContent() {
+    return QString(R"(
+<div style="text-align: center; font-family: Arial, sans-serif;">
+<h1 style="color: #2c3e50; margin-bottom: 10px;">🌸 Selene</h1>
+<h3 style="color: #7f8c8d; margin-bottom: 20px;">Tor-based P2P Chat and File Sharing Manager</h3>
+
+<div style="background-color: #ecf0f1; padding: 15px; border-radius: 8px; margin: 20px 0;">
+<p style="margin: 5px 0;"><strong>Version:</strong> %1</p>
+<p style="margin: 5px 0;"><strong>Built with:</strong> Qt Framework</p>
+<p style="margin: 5px 0;"><strong>Platform:</strong> Cross-platform</p>
+</div>
+
+<div style="margin: 30px 0;">
+<h4 style="color: #2c3e50;">What's New in Version 1.0.5 (March 11, 2026)</h4>
+
+<p style="text-align: left; margin: 10px 20px; font-weight: bold; color: #2c3e50;">Added:</p>
+<p style="text-align: left; margin: 5px 20px;">
+• Contact Groups: Added group field to contacts for better organization<br>
+• Enhanced Contact Filtering: New filter syntax #g [text] to search contacts by group<br>
+</p>
+
+<p style="text-align: left; margin: 10px 20px; font-weight: bold; color: #2c3e50;">UI Improvements:</p>
+<p style="text-align: left; margin: 5px 20px;">
+• Context Menu Fix: Fixed invisible menu items with proper light theme styling<br>
+• Header Area Optimization: Made chat header more compact with reduced spacing and margins<br>
+</p>
+
+<p style="text-align: left; margin: 10px 20px; font-weight: bold; color: #2c3e50;">Technical Updates:</p>
+<p style="text-align: left; margin: 5px 20px;">
+• Added xdg-download:ro filesystem permission to Flatpak manifest<br>
+• Added VCS browser URL to metainfo.xml<br>
+</p>
+</div>
+
+<hr style="margin: 30px 0; border: 1px solid #bdc3c7;">
+
+<h4 style="color: #2c3e50;">Version 1.0.4 (March 2, 2026)</h4>
+<p style="text-align: left; margin: 5px 20px;">
+• Upgraded KDE Flatpak runtime to version 6.10<br>
+• Full encryption features reintroduced: RSA 8192-bit for messages, AES-256 for files<br>
+</p>
+
+<h4 style="color: #2c3e50;">Version 1.0.3 (November 8, 2025)</h4>
+<p style="text-align: left; margin: 5px 20px;">
+• HTTP manager dialog for downloading files without Tor Browser<br>
+• OBFS4 and WebTunnel bridge support for Tor<br>
+• Code polishes and improvements<br>
+</p>
+
+<h4 style="color: #2c3e50;">Version 1.0.2 (August 15, 2025)</h4>
+<p style="text-align: left; margin: 5px 20px;">
+• Reverted to using ~/Documents/Selene as data location<br>
+• Improved mute/unmute functionality<br>
+</p>
+
+<h4 style="color: #2c3e50;">Version 1.0.1 (August 13, 2025)</h4>
+<p style="text-align: left; margin: 5px 20px;">
+• Fixed DocumentRoot directory for Flatpak sandbox<br>
+• Corrected Contacts directory path<br>
+</p>
+
+<h4 style="color: #2c3e50;">Version 1.0.0 (August 13, 2025)</h4>
+<p style="text-align: left; margin: 5px 20px;">
+• Initial release on Flathub<br>
+• Tor-based P2P messaging and file sharing<br>
+• End-to-end RSA encryption (2048-8192 bits)<br>
+</p>
+
+<hr style="margin: 30px 0; border: 1px solid #bdc3c7;">
+
+<div style="margin: 20px 0;">
+<p style="margin: 5px 0; color: #7f8c8d;">
+<strong>Copyright © 2025 Alamahant</strong>
+</p>
+<p style="margin: 5px 0; font-size: 12px; color: #95a5a6;">
+All rights reserved. This software is provided as-is without warranty.
+</p>
+</div>
+
+<div style="margin: 20px 0;">
+<p style="font-size: 14px; color: #7f8c8d;">
+Made with ❤️ for privacy advocates and secure communication enthusiasts
+</p>
+</div>
+</div>
+)").arg(QApplication::applicationVersion());
 }
 
 QString HelpMenuDialog::getShortcutsContent()
