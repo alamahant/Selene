@@ -79,10 +79,27 @@ Selene is designed for privacy advocates and secure communication enthusiasts, o
 </keywords>
 
 <content_rating type="oars-1.1">
-<content_attribute id="social-info">mild</content_attribute>
+  <content_attribute id="social-chat">intense</content_attribute>
+
 </content_rating>
 
 <releases>
+
+<release version="1.0.6" date="2026-04-26">
+  <description>
+    <p>New Features:</p>
+    <ul>
+      <li>Open Data Directory: Added action to open user data folder in native file manager</li>
+      <li>Symlink Creation: Create symlink from Flatpak sandbox data directory to any location in your home folder</li>
+    </ul>
+
+    <p>Technical Updates:</p>
+    <ul>
+      <li>Updated OARS metadata: social-chat content ratings</li>
+
+    </ul>
+  </description>
+</release>
 
 <release version="1.0.5" date="2026-03-11">
   <description>

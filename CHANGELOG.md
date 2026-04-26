@@ -2,6 +2,23 @@
 
 All notable changes to Selene will be documented in this file.
 
+## [1.0.6] - 2026-04-26
+
+### Added
+- **Open Data Directory**: Added action under Help menu to open user data folder in native file manager
+  - Supports Nautilus, Dolphin, Thunar, and other file managers
+  - Uses Qt's QDesktopServices for cross-platform compatibility
+
+- **Symlink Creation**: Create symlink from Flatpak sandbox to any location in your home directory
+  - Access your Selene data directly from your home folder
+  - Useful for backup, sync, or quick file access
+  - Includes permission warning for Flatpak users
+
+### Technical Updates
+- Updated OARS metadata: Added `social-chat="intense"` content rating
+
+---
+
 ## [1.0.5] - 2026-03-11
 
 ### Added
