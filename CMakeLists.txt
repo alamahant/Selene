@@ -15,6 +15,12 @@ option(FLATHUB_BUILD "Build for Flathub/Flatpak" OFF)
 option(BUILD_CURL "Build Curl" OFF)
 
 if(FLATHUB_BUILD)
+
+      add_compile_definitions(FLATHUB_BUILD)
+
+endif()
+
+if(FLATHUB_BUILD)
   # Set source directories (these will exist in the Flatpak build sandbox)
   set(LIBEVENT_SRC_DIR "${CMAKE_SOURCE_DIR}/libevent_src")
   set(TOR_SRC_DIR "${CMAKE_SOURCE_DIR}/tor_src")

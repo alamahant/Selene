@@ -32,6 +32,8 @@
 #include<QCryptographicHash>
 #include<QSaveFile>
 #include"bridgemanagerdialog.h"
+#include<QDesktopServices>
+#include<QKeySequence>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -628,8 +630,8 @@ void MainWindow::setupDockWidgets() {
     contactsDock = new QDockWidget(tr("Contacts"), this);
     contactsDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
     contactsDock->setFeatures(QDockWidget::DockWidgetMovable);
-    //contactsDock->setMinimumWidth(300);  // or whatever width works for your cards
-    contactsDock->setMinimumWidth(40);  // or whatever width works for your cards
+    //contactsDock->setMinimumWidth(300);
+    contactsDock->setMinimumWidth(40);
 
     // Create widget for dock content
     //QWidget* dockContent = new QWidget(contactsDock);
@@ -1006,7 +1008,7 @@ void MainWindow::addContact(const QString &sendersOnion, const QJsonObject &cont
         QString filePath = QFileDialog::getOpenFileName(
             dialog,
             tr("Import Contact"),
-            getContactsDirPath(), // Your function to get the app data directory
+            getContactsDirPath(),
             tr("Contact Files (*.contact)")
             );
         if (filePath.isEmpty())
@@ -1227,7 +1229,7 @@ void MainWindow::sendMessage() {
     QString message = messageInput->toPlainText().trimmed();
     if (message.isEmpty()) return;
 
-    // Get the current onion address - KEEP your original logic
+    // Get the current onion address
     QString currentOnion = networkManager->getConnectedPeerAddress();
     if (currentOnion.isEmpty()) {
         QMessageBox::warning(this, "Cannot Send", "No active connection.");
@@ -1237,7 +1239,6 @@ void MainWindow::sendMessage() {
     //encrypt
     QString unencryptedMessage = message;
     if (encryptCheckBox->isChecked()) {
-        // Use your helper to encrypt
         QString encrypted = encryptMessageForPeer(currentOnion, message);
         if (encrypted.isEmpty()) {
             QMessageBox::warning(this, "Encryption Error", "Failed to encrypt the message.");
@@ -1267,7 +1268,6 @@ void MainWindow::sendMessage() {
     if (vScrollBar) {
         vScrollBar->setValue(vScrollBar->maximum());
     }
-    // Clear input - KEEP your original logic
 
     messageInput->clear();
 }
@@ -1319,12 +1319,10 @@ void MainWindow::updateContactInfo(const QString& onionAddress) {
 void MainWindow::handleMessageReceived(const QString& senderOnion, const QString& message) {
     QString displayMessage = message;
 
-    // Make sure we have a tab for this sender - KEEP your original logic
     if (!chatDisplays.contains(senderOnion)) {
         createChatTab(senderOnion);
     }
 
-    // ADD: Ensure we have a chat session for proper HTML rendering
     if (!chatManager->getAllSessionPeers().contains(senderOnion)) {
         QString senderName = networkManager->getFriendlyName(senderOnion);
         if (senderName.isEmpty()) {
@@ -1333,7 +1331,6 @@ void MainWindow::handleMessageReceived(const QString& senderOnion, const QString
         chatManager->createSession(senderOnion, senderName);
     }
 
-    // ADD: Add message to ChatManager for HTML rendering
     //decrypt
     if (contactManager->getContact(senderOnion).encryptionEnabled) {
         QString decrypted = decryptMessageFromPeer(senderOnion, message);
@@ -1804,6 +1801,17 @@ void MainWindow::clearAllHistory() {
 
 void MainWindow::setupMenuBar()
 {
+
+    QMenu* fileMenu = menuBar()->addMenu("&File");
+    QAction *openFolderAction = fileMenu->addAction("&Open Data Directory");
+    connect(openFolderAction, &QAction::triggered, this, &MainWindow::openFolder);
+    fileMenu->addSeparator();
+
+    QAction *createSymlinkAction = fileMenu->addAction("Create Shortcut to Selene Data");
+    connect(createSymlinkAction, &QAction::triggered, this, &MainWindow::createSymlink);
+    fileMenu->addSeparator();
+
+    fileMenu->addAction("&Exit", this, &QWidget::close, QKeySequence::Quit);
     // --- Tor Menu ---
     QMenu* torMenu = menubar->addMenu(tr("Tor"));
     newCircuitAction->setText(tr("New Tor Circuit"));
@@ -2232,8 +2240,7 @@ void MainWindow::setupActions()
     copyPubKeyAction->setToolTip("Copy your public key to clipboard");
 
     connect(copyPubKeyAction, &QAction::triggered, this, [this]() {
-        // Get the public key from your Crypto class
-        QString pubKey = crypt.getPublicKey(); // Adjust if your method is named differently
+        QString pubKey = crypt.getPublicKey();
 
         if (pubKey.isEmpty()) {
             QMessageBox::warning(this, "No Public Key", "You have not generated a key pair yet.");
@@ -2322,7 +2329,6 @@ void MainWindow::setupActions()
         "You will know this is necessary if Selene fails to create onion addresses for the Chat and HTTP services."
         );
 
-    // Connect the action to your slot
     connect(editTorrcPortsAction, &QAction::triggered, this, [this]() {
         this->editTorrcPortsDialog();
     });
@@ -2988,13 +2994,11 @@ void MainWindow::checkFirstRun() {
     bool firstRun = settings.value("firstRun", true).toBool();
 
     if (firstRun) {
-        // Do your first-time setup here...
 
         settings.setValue("firstRun", false);
 
         QMessageBox::information(this, "Setup Complete",
                                  "To finalize setup, please restart the application after the UI is fully loaded");
-        // Optionally: qApp->quit();
     } else {
     }
 }
@@ -3017,7 +3021,7 @@ void MainWindow::performFactoryReset() {
     QDir dir(appDataDir);
     bool deleted = dir.exists() ? dir.removeRecursively() : false;
 
-    // Delete config dir (can contain your settings)
+    // Delete config dir (can contain settings)
     QDir dirConfig(configDir);
     bool deletedConfig = dirConfig.exists() ? dirConfig.removeRecursively() : true;
 
@@ -3179,4 +3183,123 @@ QString MainWindow::encryptFileForPeer(const QString &filePath, const QString &p
 
     qDebug() << "File encrypted successfully. Bundle:" << tempPath;
     return tempPath;
+}
+
+
+//////////
+
+void MainWindow::createSymlink()
+{
+#ifdef FLATHUB_BUILD
+    QString msg = "";
+    QMessageBox msgBox;
+    msgBox.setWindowTitle("Flatpak Permission Required");
+    msgBox.setText(QString(
+                       "%1 is running as a Flatpak and may not have access to your home directory.\n\n"
+                       "To create a symlink, you may need to grant home directory access first.\n\n"
+                       "Option 1 - Terminal:\n"
+                       "  Grant access:\n"
+                       "    flatpak override --user --filesystem=home io.github.alamahant.%1\n\n"
+                       "  Revoke access later:\n"
+                       "    flatpak override --user --nofilesystem=home io.github.alamahant.%1\n\n"
+                       "Option 2 - Flatseal:\n"
+                       "  Install Flatseal from Flathub and grant 'Home' access to %1.\n\n"
+                       "If you have already granted permissions, you can continue."
+                       ).arg(QApplication::applicationName()));
+
+    msgBox.setIcon(QMessageBox::Information);
+
+    QPushButton *continueButton = msgBox.addButton("Continue", QMessageBox::AcceptRole);
+    QPushButton *cancelButton = msgBox.addButton("Cancel", QMessageBox::RejectRole);
+    msgBox.setDefaultButton(cancelButton);
+
+    msgBox.exec();
+
+    if (msgBox.clickedButton() != continueButton) {
+        return; // User cancelled
+    }
+
+#endif
+    // Open dialog to select destination folder
+    QString destinationDir = QFileDialog::getExistingDirectory(
+                this,
+                "Select Destination Folder for Symlink",
+                QDir::homePath(),
+                QFileDialog::ShowDirsOnly
+                );
+
+    if (destinationDir.isEmpty()) {
+        return; // User cancelled
+    }
+
+    // Create symlink path
+    QString symlinkPath = QDir(destinationDir).filePath(QApplication::applicationName());
+    // Check if symlink already exists
+    if (QFile::exists(symlinkPath) || QFileInfo(symlinkPath).isSymLink()) {
+        QMessageBox::StandardButton reply = QMessageBox::question(
+                    this,
+                    "Symlink Exists",
+                    QString("A file or symlink already exists at:\n%1\n\nOverwrite?").arg(symlinkPath),
+                    QMessageBox::Yes | QMessageBox::No
+                    );
+
+        if (reply != QMessageBox::Yes) {
+            return;
+        }
+
+        // Remove existing file/symlink
+        if (!QFile::remove(symlinkPath)) {
+            QMessageBox::warning(this, "Error", "Could not remove existing file/symlink");
+            return;
+        }
+    }
+
+    // Create the symlink
+    QString targetPath = getDocumentsDirPath();
+
+    if (!QFile::exists(targetPath)) {
+        QMessageBox::warning(this, "Error",
+                             QString("Target directory does not exist:\n%1").arg(targetPath));
+        return;
+    }
+
+    if (QFile::link(targetPath, symlinkPath)) {
+        QMessageBox::information(
+                    this,
+                    "Symlink Created",
+                    QString("Symlink created successfully!\n\n"
+                            "Name: %3\n"
+                            "Location: %1\n\n"
+                            "Now you can access %3 data from:\n%2")
+                    .arg(destinationDir)
+                    .arg(symlinkPath)
+                    .arg(QApplication::applicationName())
+                    );
+    } else {
+        QMessageBox::warning(
+                    this,
+                    "Error",
+                    QString("Failed to create symlink.\n\n"
+                            "Destination: %1\n"
+                            "Target: %2\n\n"
+                            "Possible reasons:\n"
+                            "• Insufficient permissions\n"
+                            "• Invalid destination path\n"
+                            "• Filesystem doesn't support symlinks")
+                    .arg(symlinkPath)
+                    .arg(targetPath)
+                    );
+    }
+}
+
+void MainWindow::openFolder() {
+    // Optional: Check if the folder exists
+    QDir dir(getDocumentsDirPath());
+    if (!dir.exists()) {
+        return;
+    }
+
+    // Convert local path to URL and open
+    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(getDocumentsDirPath()))) {
+    }
 }

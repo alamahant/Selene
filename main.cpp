@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 #endif
 
     QCoreApplication::setApplicationName("Selene");
-    QCoreApplication::setApplicationVersion("1.0.5");
+    QCoreApplication::setApplicationVersion("1.0.6");
 
     Logger::init();
 

@@ -243,7 +243,8 @@ private:
 private slots:
     void editTorrcPortsDialog();
     void performFactoryReset();
-
+    void createSymlink();
+    void openFolder();
 private:
     SecurityManager *securityManager = nullptr;
     void checkFirstRun();
