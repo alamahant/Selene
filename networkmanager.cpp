@@ -750,8 +750,7 @@ void NetworkManager::attemptReconnect(const QString& peerAddress, int attemptsLe
             attemptReconnect(peerAddress, attemptsLeft - 1);
         });
     }
-    // If connectToPeer is asynchronous and you want to retry only on error,
-    // you can trigger attemptReconnect from your errorOccurred handler instead.
+
 }
 
 // sound system

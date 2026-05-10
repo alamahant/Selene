@@ -12,6 +12,7 @@ ContactCardWidget::ContactCardWidget(const Contact& contact, QWidget *parent)
     onionAddress(contact.onionAddress),
     displayName(contact.friendlyName),
     isSelected(false),
+    isConnected(false),
     isHovered(false),
     isBlocked(contact.isBlocked),// Initialize isBlocked
     comments(contact.comments),
@@ -112,17 +113,18 @@ void ContactCardWidget::updateLastSeen(const QDateTime& lastSeen)
 }
 
 void ContactCardWidget::setConnected(bool connected) {
+    isConnected = connected;
     if (connected) {
         connectBtn->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
         connectBtn->setToolTip("Disconnect");
         statusDot->setStyleSheet("background-color: #4CAF50; border-radius: 6px;");
         statusLabel->setText("Connected");
     } else {
-        //updateStatusDisplay();
+        setDisconnected();
     }
 }
 
-
+/*
 void ContactCardWidget::updateStatusDisplay()
 {
     if (isBlocked) {
@@ -134,7 +136,24 @@ void ContactCardWidget::updateStatusDisplay()
         statusLabel->setText("Offline");
         }
 }
+*/
 
+void ContactCardWidget::updateStatusDisplay()
+{
+    if (isBlocked) {
+        statusDot->setStyleSheet("background-color: #d32f2f; border-radius: 6px;");
+        statusLabel->setText("Blocked");
+        return;
+    }
+
+    // Add this check - don't override connected status
+    if (isConnected) {
+        return;  // Keep showing "Connected"
+    }
+
+    statusDot->setStyleSheet("background-color: #ccc; border-radius: 6px;");
+    statusLabel->setText("Offline");
+}
 
 
 void ContactCardWidget::setSelected(bool selected)
@@ -220,6 +239,7 @@ QPushButton *ContactCardWidget::getConnectBtn() const
 
 
 void ContactCardWidget::setDisconnected() {
+    isConnected = false;
     connectBtn->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
     connectBtn->setToolTip("Connect");
     statusDot->setStyleSheet("background-color: #FF5252; border-radius: 6px;");

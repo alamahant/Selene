@@ -81,6 +81,8 @@ public:
     QString getGroup() const { return group; }
 private:
     QString group;
+private:
+    bool isConnected;
 };
 
 #endif // CONTACTCARDWIDGET_H

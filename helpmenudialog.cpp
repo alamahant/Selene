@@ -121,6 +121,37 @@ QString HelpMenuDialog::getWhatsNewContent() {
 </div>
 
 <div style="margin: 30px 0;">
+<h4 style="color: #2c3e50;">What's New in Version 1.0.7 (March 11, 2026)</h4>
+
+<p style="text-align: left; margin: 10px 20px; font-weight: bold; color: #2c3e50;">Fixed:</p>
+<p style="text-align: left; margin: 5px 20px;">
+• Contact Status Display: Fixed issue where connected contacts would incorrectly transition to offline status<br>
+• Connection State Management: Added proper tracking of connection state to prevent status label from being overwritten by last-seen updates<br>
+</p>
+
+<p style="text-align: left; margin: 10px 20px; font-weight: bold; color: #2c3e50;">Improved:</p>
+<p style="text-align: left; margin: 5px 20px;">
+• Connection State Reliability: Enhanced connection status synchronization across all UI components<br>
+• Status Indicator Accuracy: Connected contacts now correctly persist their connected state until explicitly disconnected<br>
+</p>
+</div>
+
+<div style="margin: 30px 0;">
+<h4 style="color: #2c3e50;">What's New in Version 1.0.6 (April 26, 2026)</h4>
+
+<p style="text-align: left; margin: 10px 20px; font-weight: bold; color: #2c3e50;">New Features:</p>
+<p style="text-align: left; margin: 5px 20px;">
+• Open Data Directory: Added action to open user data folder in native file manager<br>
+• Symlink Creation: Create symlink from Flatpak sandbox data directory to any location in your home folder<br>
+</p>
+
+<p style="text-align: left; margin: 10px 20px; font-weight: bold; color: #2c3e50;">Technical Updates:</p>
+<p style="text-align: left; margin: 5px 20px;">
+• Updated OARS metadata: social-chat content ratings<br>
+</p>
+</div>
+
+<div style="margin: 30px 0;">
 <h4 style="color: #2c3e50;">What's New in Version 1.0.5 (March 11, 2026)</h4>
 
 <p style="text-align: left; margin: 10px 20px; font-weight: bold; color: #2c3e50;">Added:</p>
@@ -204,7 +235,7 @@ QString HelpMenuDialog::getShortcutsContent()
 QString HelpMenuDialog::getAboutContent() {
     return QString(R"(
 <div style="text-align: center; font-family: Arial, sans-serif;">
-<h1 style="color: #2c3e50; margin-bottom: 10px;">🌸 Selene</h1>
+<h1 style="color: #2c3e50; margin-bottom: 10px;">🌙 Selene</h1>
 <h3 style="color: #7f8c8d; margin-bottom: 20px;">Tor-based P2P Chat and File Sharing Manager</h3>
 <p style="font-size: 16px; margin-bottom: 20px;">
 Selene is a comprehensive peer-to-peer chat and file sharing application built on the Tor network.
@@ -220,8 +251,22 @@ It enables secure, private communication and seamless file transfers between use
 <p style="text-align: left; margin: 10px 20px;">
 • True peer-to-peer messaging: messages travel exclusively over the Tor network, never leaving Tor at any point<br>
 • End-to-end RSA encryption for messages, with selectable key lengths: 2048, 4096, or 8192 bits<br>
-• File sharing via ephemeral Tor hidden service HTTP servers: recipients access files directly using the provided onion address in Tor Browser or any Tor-enabled private window<br>
+• File sharing via ephemeral Tor hidden service HTTP servers: recipients access files directly using the provided onion address in Tor Browser or any Tor-enabled private window
 </p>
+
+<p><strong style="color: #27ae60;">✓ Free for Linux on Flathub</strong></p>
+
+<p><strong>Windows & macOS Binaries:</strong><br>
+<a href="https://jnanadhakini.gumroad.com/l/lwjec" style="color: #3498db; text-decoration: none;">
+→ https://jnanadhakini.gumroad.com/l/lwjec</a></p>
+
+<p><strong>All Windows/macOS apps:</strong><br>
+<a href="https://jnanadhakini.gumroad.com" style="color: #3498db; text-decoration: none;">
+→ https://jnanadhakini.gumroad.com</a></p>
+
+<p><strong>Source Code & Linux Version:</strong><br>
+<a href="https://github.com/alamahant/Selene" style="color: #3498db; text-decoration: none;">
+→ https://github.com/alamahant/Selene</a></p>
 </div>
 <hr style="margin: 30px 0; border: 1px solid #bdc3c7;">
 <div style="margin: 20px 0;">
@@ -229,7 +274,7 @@ It enables secure, private communication and seamless file transfers between use
 <strong>Copyright © 2025 Alamahant</strong>
 </p>
 <p style="margin: 5px 0; font-size: 12px; color: #95a5a6;">
-All rights reserved. This software is provided as-is without warranty.
+This software is open source (GPL-3.0). Linux version free on Flathub.
 </p>
 </div>
 <div style="margin: 20px 0;">

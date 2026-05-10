@@ -2,6 +2,15 @@
 
 All notable changes to Selene will be documented in this file.
 
+## [1.0.7] - 2026-05-10
+
+### Fixed
+- **Contact Status Display**: Fixed issue where connected contacts would incorrectly transition to offline status
+  - Connected contacts now properly stay "Connected" until manually disconnected
+  - Status no longer gets overwritten by automatic last-seen updates
+
+---
+
 ## [1.0.6] - 2026-04-26
 
 ### Added
