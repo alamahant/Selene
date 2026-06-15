@@ -14,6 +14,7 @@
 #include"logger.h"
 #include<QSoundEffect>
 #include<QSettings>
+#include<QStyleFactory>
 
 
 
@@ -43,6 +44,25 @@ int main(int argc, char *argv[])
 
     QApplication a(argc, argv);
     //a.setQuitOnLastWindowClosed(true);
+
+
+#ifndef FLATHUB_BUILD
+
+    a.setStyle(QStyleFactory::create("Fusion"));
+
+    QPalette lightPalette;
+    lightPalette.setColor(QPalette::Window, Qt::white);
+    lightPalette.setColor(QPalette::WindowText, Qt::black);
+    lightPalette.setColor(QPalette::Base, Qt::white);
+    lightPalette.setColor(QPalette::Text, Qt::black);
+    lightPalette.setColor(QPalette::Button, QColor(240, 240, 240));
+    lightPalette.setColor(QPalette::ButtonText, Qt::black);
+    lightPalette.setColor(QPalette::Highlight, QColor(0, 120, 215));
+    lightPalette.setColor(QPalette::HighlightedText, Qt::white);
+
+    a.setPalette(lightPalette);
+#endif
+
 
     // Check for existing instance
     const QString serverName = "Selene-SingleInstanceServer";
