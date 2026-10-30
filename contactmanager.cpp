@@ -8,7 +8,6 @@ ContactManager::ContactManager(QObject *parent)
     : QObject{parent}
 {
     contactsFilePath = getAppDataDir() + "/.selene/contacts.json";
-    //contactsFilePath = "contacts.json";
     loadContacts();
 
 }
@@ -134,7 +133,6 @@ void ContactManager::loadContacts()
 void ContactManager::updateContact(const Contact& updatedContact) {
     contacts[updatedContact.onionAddress] = updatedContact;
     saveContacts();
-   // emit contactsChanged(updatedContact);
 }
 
 
@@ -151,7 +149,6 @@ Contact ContactManager::getContact(const QString& onion) const {
     if (contacts.contains(onion)) {
         return contacts.value(onion);
     }
-    // Return an empty contact if not found
     return Contact(onion);
 }
 

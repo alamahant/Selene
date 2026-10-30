@@ -9,10 +9,20 @@ int DefaultHttpServicePort;
 int DefaultControlPort;
 int DefaultProxyPort;
 
+#ifdef Q_OS_WIN
+    const qreal DEFAULTFONTSIZE = 11;
+#else
+    const qreal DEFAULTFONTSIZE = 12;
+#endif
+qreal FONTSIZE = DEFAULTFONTSIZE;
+
+QString httpOnionAddress = QString();
 
 QString getAppDataDir() {
     return QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
 }
+
+
 
 QString getChatHistoryFilePath() {
     QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
@@ -20,15 +30,11 @@ QString getChatHistoryFilePath() {
 }
 
 QString getFileSaveDirPath() {
-    //QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-    //return dataDir + QDir::separator() + "files";
     return getDocumentsDirPath() + QDir::separator() + "files";
 
 }
 
 QString getWWWDir() {
-    //QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-    //return dataDir + QDir::separator() + "www";
     return getDocumentsDirPath() + QDir::separator() + "www";
 }
 
@@ -45,7 +51,6 @@ QString getCryptoDirPath(){
 }
 
 QString getContactsDirPath(){
-    //return getAppDataDir() + QDir::separator() + "contacts";
     return getDocumentsDirPath() + QDir::separator() + "contacts";
 }
 
@@ -60,6 +65,11 @@ QString getConfigDirPath(){
 QString getDocumentsDirPath(){
     return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QDir::separator() + "Selene";
 }
+
+QString getWebsitesDir() {
+    return getDocumentsDirPath() + "/websites";
+}
+
 
 QString getDownloadsDirPath(){
     return getDocumentsDirPath() + QDir::separator() + "Downloads";

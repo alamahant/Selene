@@ -28,7 +28,6 @@ private:
     ChatMessage m_message;
     QString m_senderName;
     QLabel* m_contentLabel;
-    //QTextBrowser* m_contentLabel;
 
     QLabel* m_timeLabel;
     bool m_isFromMe;

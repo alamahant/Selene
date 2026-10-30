@@ -19,7 +19,6 @@ LogViewerDialog::LogViewerDialog(const QString& logPath, QWidget* parent)
 
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
 
-    // Search bar
     QHBoxLayout* searchLayout = new QHBoxLayout();
     QLabel* searchLabel = new QLabel("Search Pattern:", this);
     m_searchEdit = new QLineEdit(this);
@@ -28,11 +27,9 @@ LogViewerDialog::LogViewerDialog(const QString& logPath, QWidget* parent)
     searchLayout->addWidget(m_searchEdit);
     searchLayout->addWidget(searchBtn);
 
-    // Log display
     m_logEdit = new QTextEdit(this);
     m_logEdit->setReadOnly(true);
 
-    // Truncate button
     QPushButton* truncateBtn = new QPushButton("Truncate Log", this);
 
     mainLayout->addLayout(searchLayout);
@@ -51,7 +48,6 @@ void LogViewerDialog::onSearchClicked() {
         m_logEdit->setPlainText(m_logContents);
         return;
     }
-    // Simple regex search, highlight matches
     QRegularExpression re(pattern, QRegularExpression::CaseInsensitiveOption);
     QStringList lines = m_logContents.split('\n');
     QStringList matched;
@@ -87,4 +83,9 @@ void LogViewerDialog::loadLog() {
     } else {
         m_logEdit->setPlainText("Unable to open log file: " + m_logPath);
     }
+}
+
+QTextEdit *LogViewerDialog::logEdit() const
+{
+    return m_logEdit;
 }

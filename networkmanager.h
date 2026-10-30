@@ -41,7 +41,6 @@ public:
     void resetTransfer();
     void deleteContact(const QString& onion);
 
-    // Methods for managing active connection
     void setActiveConnection(const QString& peerAddress);
     QString getActiveConnection() const;
     QStringList getConnectedPeers() const;
@@ -60,7 +59,6 @@ signals:
     void connectionStatusChanged(bool connected, const QString& peerAddress = QString());
     void activeConnectionChanged(const QString& peerAddress);
     void networkError(const QString& error);
-    //void peerDisconnected();
     void peerDisconnected(const QString& peerAddress = QString());
 
     void peerIdentified(const QString& peerOnion);
@@ -106,15 +104,12 @@ signals:
     void unknownContactMessageReceived(const QString& senderAddress);
 
 private:
-    // reconnect functionality
     QMap<QString, bool> disconnectRequested; // Tracks if disconnect was intentional
     void attemptReconnect(const QString& peerAddress, int attemptsLeft);
-    //sound system
     void playSound(SoundType type, bool playIt);
     bool play = true;
     QMap<SoundType, QSoundEffect*> m_soundEffects;
 public:
-    // available for chat?
     bool availableForChat = true;
     void setPlay(bool playIt){
         play = playIt;

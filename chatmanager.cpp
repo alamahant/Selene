@@ -39,12 +39,10 @@ void ChatManager::createSession(const QString& peerAddress, const QString& peerN
 void ChatManager::activateSession(const QString& peerAddress) {
 
     if (chatSessions.contains(peerAddress)) {
-        // Deactivate current active session
         if (!activeSessionPeer.isEmpty() && chatSessions.contains(activeSessionPeer)) {
             chatSessions[activeSessionPeer].isActive = false;
         }
 
-        // Activate new session
         chatSessions[peerAddress].isActive = true;
         chatSessions[peerAddress].lastActivity = QDateTime::currentDateTime();
         activeSessionPeer = peerAddress;
@@ -133,7 +131,6 @@ void ChatManager::markAsRead(const QString& peerAddress) {
 }
 
 
-// Helper function to format message time
 QString ChatManager::formatMessageTime(const QDateTime& timestamp) {
     return timestamp.time().toString("hh:mm");
 }
@@ -156,14 +153,11 @@ QString ChatManager::formatMessageHTML(const ChatMessage& message, bool consecut
 
     QString html = QString("<div class='message-container %1%2'>").arg(messageClass, consecutiveClass);
 
-    // Message bubble with content
     html += QString("<div class='message-bubble'>%1</div>").arg(message.content);
 
-    // Time and status
     html += "<div class='message-time'>";
     html += getTimeString(message.timestamp);
 
-    // Add status indicators for outgoing messages
     if (message.isFromMe) {
         html += "<span class='message-status'>";
         if (message.isDelivered) {
@@ -185,7 +179,6 @@ QString ChatManager::getTimeString(const QDateTime& timestamp) {
 }
 
 QString ChatManager::getDateHeader(const QDateTime& timestamp, const QDate& prevDate) {
-    // If no previous date or different day, show date header
     if (prevDate.isNull() || prevDate != timestamp.date()) {
         QString dateText;
         QDate today = QDate::currentDate();
@@ -212,7 +205,6 @@ void ChatManager::renderMessagesToScrollArea(const QString& peerAddress, QScroll
         return;
     }
 
-    // Get or create the chat widget
     QWidget* chatWidget = scrollArea->widget();
     if (!chatWidget) {
         chatWidget = new QWidget();
@@ -220,7 +212,6 @@ void ChatManager::renderMessagesToScrollArea(const QString& peerAddress, QScroll
         scrollArea->setWidgetResizable(true);
     }
 
-    // Clear existing layout
     if (chatWidget->layout()) {
         QLayoutItem* item;
         while ((item = chatWidget->layout()->takeAt(0)) != nullptr) {
@@ -230,32 +221,26 @@ void ChatManager::renderMessagesToScrollArea(const QString& peerAddress, QScroll
         delete chatWidget->layout();
     }
 
-    // Create new layout
     QVBoxLayout* layout = new QVBoxLayout(chatWidget);
     layout->setAlignment(Qt::AlignTop);
     layout->setSpacing(3);
     layout->setContentsMargins(5, 5, 5, 5);
 
-    // Get the chat session
     const ChatSession& session = chatSessions[peerAddress];
 
-    // Add message widgets
     for (const ChatMessage& message : session.messages) {
         QString senderDisplayName = message.isFromMe ? "Me" : session.peerName;
 
 
-        //MessageBubbleWidget* bubbleWidget = new MessageBubbleWidget(message, session.peerName);
         MessageBubbleWidget* bubbleWidget = new MessageBubbleWidget(message, senderDisplayName);
         bubbleWidget->setFontSize(fontSize); // set font size
 
         layout->addWidget(bubbleWidget);
     }
 
-    // Add stretch to push messages to top
     layout->addStretch();
 
 
-    // Scroll to bottom after a short delay
     QTimer::singleShot(10, [scrollArea]() {
         scrollArea->verticalScrollBar()->setValue(scrollArea->verticalScrollBar()->maximum());
     });
@@ -295,7 +280,6 @@ bool ChatManager::loadFromFile(const QString& filePath) {
     return true;
 }
 
-// File Transfers
 void ChatManager::addFileMessage(const QString& peerAddress, const QString& fileName, qint64 fileSize, bool isFromMe)
 {
     if (!chatSessions.contains(peerAddress)) {
@@ -311,7 +295,6 @@ void ChatManager::addFileMessage(const QString& peerAddress, const QString& file
     msg.isDelivered = false;
     msg.isFromMe = isFromMe;
 
-    // File transfer fields
     msg.isFile = true;
     msg.fileName = fileName;
     msg.fileSize = fileSize;
@@ -325,7 +308,6 @@ void ChatManager::addFileMessage(const QString& peerAddress, const QString& file
     emit messageAdded(peerAddress, msg); // For compatibility with existing UI
 }
 
-// Update progress for an ongoing file transfer
 void ChatManager::updateFileTransferProgress(const QString& peerAddress, const QString& fileName, qint64 bytesTransferred, qint64 totalBytes)
 {
     ChatMessage* msg = findFileMessage(peerAddress, fileName);
@@ -341,7 +323,6 @@ void ChatManager::updateFileTransferProgress(const QString& peerAddress, const Q
     emit messageAdded(peerAddress, *msg);     // Optional: update UI
 }
 
-// Mark a file transfer as complete
 void ChatManager::markFileTransferComplete(const QString& peerAddress, const QString& fileName)
 {
     ChatMessage* msg = findFileMessage(peerAddress, fileName);
@@ -357,7 +338,6 @@ void ChatManager::markFileTransferComplete(const QString& peerAddress, const QSt
     emit messageAdded(peerAddress, *msg);
 }
 
-// Mark a file transfer as failed
 void ChatManager::markFileTransferFailed(const QString& peerAddress, const QString& fileName, const QString& error)
 {
     ChatMessage* msg = findFileMessage(peerAddress, fileName);
@@ -372,7 +352,6 @@ void ChatManager::markFileTransferFailed(const QString& peerAddress, const QStri
     emit messageAdded(peerAddress, *msg);
 }
 
-// Helper: Find file message in session (for progress updates)
 ChatMessage* ChatManager::findFileMessage(const QString& peerAddress, const QString& fileName)
 {
     if (!chatSessions.contains(peerAddress))
@@ -389,18 +368,13 @@ void ChatManager::clearHistoryForPeer(const QString& peerOnion) {
     auto it = chatSessions.find(peerOnion);
     if (it != chatSessions.end()) {
         it.value().messages.clear(); // Assuming ChatSession has a QList<ChatMessage> messages;
-        // Optionally, clear file transfer info if you want to remove those as well
-        // it.value().fileTransfers.clear();
     }
     saveToFile(getChatHistoryFilePath());
 }
 
-// Clear chat history for all peers
 void ChatManager::clearAllHistory() {
     for (auto it = chatSessions.begin(); it != chatSessions.end(); ++it) {
         it.value().messages.clear();
-        // Optionally, clear file transfer info as well
-        // it.value().fileTransfers.clear();
     }
     saveToFile(getChatHistoryFilePath());
 }
@@ -408,27 +382,22 @@ void ChatManager::clearAllHistory() {
 
 void ChatManager::renderMessageToScrollArea(const QString& peerAddress, QScrollArea* scrollArea, const ChatMessage& message, int fontSize)
 {
-    // Ensure the session exists
     if (!chatSessions.contains(peerAddress)) {
         return;
     }
 
-    // better version to create widget and layout if not present the very first time we add a contact.
-    // Get or create the chat widget
     QWidget* chatWidget = scrollArea->widget();
     if (!chatWidget) {
         chatWidget = new QWidget();
         scrollArea->setWidget(chatWidget);
         scrollArea->setWidgetResizable(true);
 
-        // Create new layout if needed
         QVBoxLayout* layout = new QVBoxLayout(chatWidget);
         layout->setAlignment(Qt::AlignTop);
         layout->setSpacing(3);
         layout->setContentsMargins(5, 5, 5, 5);
     }
 
-    // Get the layout (create if needed)
     QVBoxLayout* layout = qobject_cast<QVBoxLayout*>(chatWidget->layout());
     if (!layout) {
         layout = new QVBoxLayout(chatWidget);
@@ -437,10 +406,8 @@ void ChatManager::renderMessageToScrollArea(const QString& peerAddress, QScrollA
         layout->setContentsMargins(5, 5, 5, 5);
     }
 
-    //
 
 
-    // Remove stretch at the end if present
     int count = layout->count();
     if (count > 0) {
         QLayoutItem* lastItem = layout->itemAt(count - 1);
@@ -450,19 +417,15 @@ void ChatManager::renderMessageToScrollArea(const QString& peerAddress, QScrollA
         }
     }
 
-    // Prepare sender display name
     const ChatSession& session = chatSessions[peerAddress];
     QString senderDisplayName = message.isFromMe ? "Me" : session.peerName;
 
-    // Create and add the new message bubble
     MessageBubbleWidget* bubbleWidget = new MessageBubbleWidget(message, senderDisplayName);
     bubbleWidget->setFontSize(fontSize);
     layout->addWidget(bubbleWidget);
 
-    // Add stretch to push messages to top
     layout->addStretch();
 
-    // Scroll to bottom after a short delay
     QTimer::singleShot(10, [scrollArea]() {
         scrollArea->verticalScrollBar()->setValue(scrollArea->verticalScrollBar()->maximum());
     });

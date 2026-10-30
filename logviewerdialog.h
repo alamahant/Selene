@@ -13,6 +13,8 @@ class LogViewerDialog : public QDialog {
 public:
     explicit LogViewerDialog(const QString& logPath, QWidget* parent = nullptr);
 
+    QTextEdit *logEdit() const;
+
 private slots:
     void onSearchClicked();
     void onTruncateClicked();

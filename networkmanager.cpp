@@ -34,7 +34,6 @@ bool NetworkManager::initialize(const QString& onionAddress) {
     myOnionAddress = onionAddress;
     Logger::log(Logger::INFO, "Initializing network with address: " + onionAddress);
 
-    // Create a contact for ourselves if it doesn't exist
     QString selfName = contactManager->getFriendlyName(onionAddress);
     if (selfName == onionAddress || !selfName.contains("Me")) {
         Contact selfContact;
@@ -47,13 +46,11 @@ bool NetworkManager::initialize(const QString& onionAddress) {
     QNetworkProxy proxy;
     proxy.setType(QNetworkProxy::Socks5Proxy);
     proxy.setHostName("127.0.0.1");
-    //proxy.setPort(9050);
     proxy.setPort(DefaultProxyPort);
 
     QNetworkProxy::setApplicationProxy(proxy);
     Logger::log(Logger::INFO, "SOCKS5 proxy configured");
 
-    //bool success = server->listen(QHostAddress::LocalHost, 8080);
     bool success = server->listen(QHostAddress::LocalHost, DefaultChatServicePort);
 
     Logger::log(Logger::INFO, "Server listening status: " + QString::number(success));
@@ -63,7 +60,6 @@ bool NetworkManager::initialize(const QString& onionAddress) {
 void NetworkManager::handleNewConnection() {
 
     if (!availableForChat) {
-        // Accept the pending connection and immediately close it
         QTcpSocket* socket = server->nextPendingConnection();
         if (socket) {
             socket->disconnectFromHost();
@@ -80,11 +76,8 @@ void NetworkManager::handleNewConnection() {
 
     Logger::log(Logger::INFO, "New incoming connection from: " + socket->peerAddress().toString());
 
-    // Create a temporary peer entry with a placeholder address
-    // We'll update this with the real onion address after handshake
     QString tempAddress = "temp_" + QString::number(QDateTime::currentMSecsSinceEpoch());
 
-    // Create peer state
     PeerState newPeer;
     newPeer.socket = socket;
     newPeer.onionAddress = tempAddress;  // Temporary, will be updated after handshake
@@ -93,29 +86,24 @@ void NetworkManager::handleNewConnection() {
     newPeer.connectionInitiator = false;  // We did not initiate this connection
     peers[tempAddress] = newPeer;
 
-    // Connect signals
     connect(socket, &QTcpSocket::disconnected, [this, socket, tempAddress]() {
         Logger::log(Logger::INFO, "Incoming connection disconnected");
 
-        // Find the actual peer address (it might have been updated after handshake)
         QString peerAddress = tempAddress;
         QVariant peerProperty = socket->property("peer_onion");
         if (peerProperty.isValid()) {
             peerAddress = peerProperty.toString();
         }
 
-        // Update peer state
         if (peers.contains(peerAddress)) {
             peers[peerAddress].isConnected = false;
             peers[peerAddress].lastSeen = QDateTime::currentDateTime();
             peers.remove(peerAddress);
         }
 
-        // If this was the active connection, clear it
         if (socket == clientSocket) {
             clientSocket = nullptr;
             setConnectedPeerAddress("");
-            //emit connectionStatusChanged(false);
             emit connectionStatusChanged(false, peerAddress);  // Using peerAddress instead of tempAddress since it's updated after handshake
         }
 
@@ -132,14 +120,12 @@ void NetworkManager::handleNewConnection() {
         QString errorMsg = "Socket error on incoming connection: " + socket->errorString();
         Logger::log(Logger::ERROR, errorMsg);
 
-        // Find the actual peer address (it might have been updated after handshake)
         QString peerAddress = tempAddress;
         QVariant peerProperty = socket->property("peer_onion");
         if (peerProperty.isValid()) {
             peerAddress = peerProperty.toString();
         }
 
-        // Clean up on error
         if (peers.contains(peerAddress)) {
             peers.remove(peerAddress);
         }
@@ -156,19 +142,15 @@ void NetworkManager::handleNewConnection() {
 
     connect(socket, &QTcpSocket::readyRead, this, &NetworkManager::handleIncomingData);
 
-    // Set as active connection
     clientSocket = socket;
 
-    // Send handshake to identify ourselves
     sendHandshake(socket);
 
-    //emit connectionStatusChanged(true);
     emit connectionStatusChanged(true, tempAddress);
     playSound(SoundType::MessageReceived, play);
 
 }
 
-//CONNECT TO PEER ASYNCHRONOUS VERSION
 bool NetworkManager::connectToPeer(const QString& peerAddress) {
 
     Logger::log(Logger::INFO, "Starting connection process to: " + peerAddress);
@@ -179,7 +161,6 @@ bool NetworkManager::connectToPeer(const QString& peerAddress) {
         peers[peerAddress].socket->state() == QAbstractSocket::ConnectedState) {
         Logger::log(Logger::INFO, "Already connected to peer: " + peerAddress);
 
-        // Get friendly name for the peer, fallback to onion address if not set
         QString friendlyName = getFriendlyName(peerAddress);
         if (friendlyName.isEmpty())
             friendlyName = peerAddress;
@@ -269,21 +250,17 @@ bool NetworkManager::connectToPeer(const QString& peerAddress) {
     Logger::log(Logger::INFO, "Attempting connection to: " + peerAddress);
     newSocket->connectToHost(peerAddress, 80);
 
-    // 30-second connection timeout
 
     QTimer* connectTimeout = new QTimer(newSocket);
     connectTimeout->setSingleShot(true);
-    connectTimeout->setInterval(20000); // 20 seconds
+    connectTimeout->setInterval(30000); // 30 seconds
 
-    // If connected before timeout, stop and delete the timer
     connect(newSocket, &QTcpSocket::connected, connectTimeout, &QTimer::stop);
     connect(newSocket, &QTcpSocket::connected, connectTimeout, &QTimer::deleteLater);
 
-    // If timeout fires before connection, abort and clean up
     connect(connectTimeout, &QTimer::timeout, [this, newSocket, peerAddress]() {
         Logger::log(Logger::WARNING, "Connection to " + peerAddress + " timed out after 30 seconds.");
         newSocket->abort();
-        // show a message here
         QMessageBox::warning(
             nullptr,
             "Unable to Connect",
@@ -294,7 +271,6 @@ bool NetworkManager::connectToPeer(const QString& peerAddress) {
     });
 
     connectTimeout->start();
-    // Immediately return true: connection is now asynchronous
     return true;
 }
 
@@ -306,7 +282,6 @@ void NetworkManager::disconnectFromPeer(const QString& peerAddress) {
 
     Logger::log(Logger::DEBUG, "Deliberate disconnect initiated for peer: " + peerAddress);
 
-    // Only disconnect if the peer exists
     if (peers.contains(peerAddress)) {
         PeerState& peer = peers[peerAddress];
         if (peer.socket) {
@@ -316,7 +291,6 @@ void NetworkManager::disconnectFromPeer(const QString& peerAddress) {
         }
         peers.remove(peerAddress);
 
-        // If this was the active connection, clear it
         if (connectedPeerAddress == peerAddress) {
             setConnectedPeerAddress("");
             clientSocket = nullptr;
@@ -345,7 +319,6 @@ void NetworkManager::sendHandshake(QTcpSocket* socket)
     handshake["onion"] = myOnionAddress;
 
     QJsonDocument doc(handshake);
-    //QByteArray data = doc.toJson();
     QByteArray data = doc.toJson(QJsonDocument::Compact) + "\n";
 
     socket->write(data);
@@ -376,12 +349,10 @@ void NetworkManager::handleIncomingData() {
         return;
     }
 
-    // Append new data to the buffer
     QByteArray newData = socket->readAll();
     Logger::log(Logger::DEBUG, "Received data: " + QString(newData));
     peer->messageBuffer.append(newData);
 
-    // Process all complete messages (split by '\n')
     while (true) {
         int newlineIndex = peer->messageBuffer.indexOf('\n');
         if (newlineIndex == -1)
@@ -396,7 +367,6 @@ void NetworkManager::handleIncomingData() {
         QJsonParseError parseError;
         QJsonDocument doc = QJsonDocument::fromJson(messageData, &parseError);
 
-        // If we have a complete valid JSON message
         if (parseError.error == QJsonParseError::NoError) {
             if (doc.isObject()) {
                 QJsonObject message = doc.object();
@@ -405,11 +375,9 @@ void NetworkManager::handleIncomingData() {
                 if (type == "handshake") {
                     QString peerOnion = message["onion"].toString();
 
-                    //protect against double connection
                     if (peers.contains(peerOnion) && peers[peerOnion].isConnected && peers[peerOnion].socket != socket) {
                         Logger::log(Logger::INFO, "Duplicate connection from " + peerOnion + " blocked.");
 
-                        // Get friendly name for the peer, fallback to onion if not set
                         QString friendlyName = getFriendlyName(peerOnion);
                         if (friendlyName.isEmpty())
                             friendlyName = peerOnion;
@@ -424,19 +392,14 @@ void NetworkManager::handleIncomingData() {
                                 "please disconnect from this peer and wait for their incoming connection, "
                                 "or agree on who should initiate the connection in the future."
                             );
-                        // socket->disconnectFromHost();
-                        // socket->deleteLater();
                         return;
                     }
 
-                    //
-                    // Check if this is an unknown contact
                     if (!contactManager->getContacts().contains(peerOnion)) {
                         emit unknownContactMessageReceived(peerOnion);
                         playSound(SoundType::UnknownContact, play);
                     }
 
-                    // Check if peer is blocked before processing handshake
                     if (contactManager->isBlocked(peerOnion)) {
                         Logger::log(Logger::INFO, "Rejecting connection from unavailable peer: " + peerOnion);
                         socket->disconnectFromHost();
@@ -445,10 +408,8 @@ void NetworkManager::handleIncomingData() {
 
                     Logger::log(Logger::INFO, "Handshake received from: " + peerOnion);
 
-                    // Store the onion address as a property on the socket
                     socket->setProperty("peer_onion", peerOnion);
 
-                    // Find the temporary peer entry and update it with the real onion address
                     QString tempKey = "";
                     for (auto it = peers.begin(); it != peers.end(); ++it) {
                         if (it.value().socket == socket) {
@@ -457,25 +418,20 @@ void NetworkManager::handleIncomingData() {
                         }
                     }
                     if (!tempKey.isEmpty() && tempKey != peerOnion) {
-                        // Remove the temporary entry
                         PeerState state = peers[tempKey];
                         peers.remove(tempKey);
-                        // Update with real onion address
                         state.onionAddress = peerOnion;
                         peers[peerOnion] = state;
                     }
 
-                    // Set as active connection
                     clientSocket = socket;
                     setConnectedPeerAddress(peerOnion);
 
-                    // Send handshake back if we haven't already
                     if (!socket->property("handshake_sent").toBool()) {
                         sendHandshake(socket);
                         socket->setProperty("handshake_sent", true);
                     }
 
-                    // Emit signals for peer identification and connection
                     emit peerIdentified(peerOnion);
                     emit peerConnected(peerOnion);
 
@@ -485,14 +441,11 @@ void NetworkManager::handleIncomingData() {
                 else if (type == "message") {
                     QString content = message["content"].toString();
 
-                    // Find which peer sent this message
                     QString senderOnion;
-                    // First try to get from socket property
                     QVariant peerProperty = socket->property("peer_onion");
                     if (peerProperty.isValid()) {
                         senderOnion = peerProperty.toString();
                     }
-                    // If not found in property, try to find in peers map
                     if (senderOnion.isEmpty()) {
                         for (auto it = peers.begin(); it != peers.end(); ++it) {
                             if (it.value().socket == socket) {
@@ -501,21 +454,16 @@ void NetworkManager::handleIncomingData() {
                             }
                         }
                     }
-                    // If we still don't have a sender, use the connected peer address
                     if (senderOnion.isEmpty() && !connectedPeerAddress.isEmpty()) {
                         senderOnion = connectedPeerAddress;
                         Logger::log(Logger::INFO, "Using connectedPeerAddress for sender: " + senderOnion);
                     }
-                    // Log the message reception
                     Logger::log(Logger::INFO, "Message received from " + senderOnion + ": " + content);
-                    // Emit the signal with sender and content
                     emit messageReceived(senderOnion, content);
                     playSound(SoundType::MessageReceived, play);
                 }
             }
         } else {
-            // If we couldn't parse the message, log the error but don't clear the buffer
-            // It might be an incomplete message that will be completed with more data
             Logger::log(Logger::DEBUG, "Incomplete message or parse error: " + parseError.errorString());
         }
     }
@@ -569,10 +517,8 @@ void NetworkManager::deleteContact(const QString& onion)
 void NetworkManager::checkPeerAvailability(const QString& onionAddress) {
     Logger::log(Logger::INFO, "Connecting to peer: " + onionAddress);
 
-    // Attempt to connect to the peer
     bool connected = connectToPeer(onionAddress);
 
-    // Notify about the connection result
     emit peerAvailabilityResult(onionAddress, connected);
 }
 
@@ -634,9 +580,7 @@ void NetworkManager::sendMessageToPeer(const QString& peerAddress, const QString
         messageObj["type"] = "message";
         messageObj["content"] = message;
         QJsonDocument doc(messageObj);
-        //QByteArray data = doc.toJson();
 
-        // to separate messages perfectly
         QByteArray data = doc.toJson(QJsonDocument::Compact) + "\n";
 
         qint64 bytesSent = peers[peerAddress].socket->write(data);
@@ -704,8 +648,6 @@ void NetworkManager::sendPing(QTcpSocket* socket) {
     QJsonObject pingObj;
     pingObj["type"] = "ping";
     QJsonDocument doc(pingObj);
-    //QByteArray pingMessage = doc.toJson();
-    // Properly isolate ping messages
     QByteArray pingMessage = doc.toJson(QJsonDocument::Compact) + "\n";
 
     socket->write(pingMessage);
@@ -722,7 +664,6 @@ void NetworkManager::verifyHiddenService() {
 
     connect(testSocket, &QTcpSocket::errorOccurred, [this](QAbstractSocket::SocketError error) {
         Logger::log(Logger::WARNING, "Hidden service not yet reachable");
-        // Retry after delay
         QTimer::singleShot(5000, this, &NetworkManager::verifyHiddenService);
     });
 
@@ -739,12 +680,9 @@ void NetworkManager::attemptReconnect(const QString& peerAddress, int attemptsLe
     Logger::log(Logger::INFO, "Attempting to reconnect to peer: " + peerAddress +
                                   " (" + QString::number(attemptsLeft) + " attempts left)");
 
-    // Try to connect asynchronously
-    //startedbyme = true;
 
     bool started = connectToPeer(peerAddress);
 
-    // If connectToPeer fails to start, schedule another attempt after a delay
     if (!started) {
         QTimer::singleShot(2000, this, [this, peerAddress, attemptsLeft]() {
             attemptReconnect(peerAddress, attemptsLeft - 1);
@@ -753,20 +691,17 @@ void NetworkManager::attemptReconnect(const QString& peerAddress, int attemptsLe
 
 }
 
-// sound system
 void NetworkManager::playSound(SoundType type, bool playIt)
 {
     if (!playIt) return;
 
     if (!m_soundEffects.contains(type)) {
-        // Create and cache the sound effect for this type
         QSoundEffect* effect = new QSoundEffect(this);
         effect->setSource(QUrl("qrc" + soundResourcePath(type)));
         effect->setVolume(0.8);
         m_soundEffects[type] = effect;
     }
     QSoundEffect* effect = m_soundEffects[type];
-    // If already playing, stop and replay
     if (effect->isPlaying()) {
         effect->stop();
     }

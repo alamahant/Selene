@@ -5,6 +5,7 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QDir>
+#include"sitemanager.h"
 
 /**
  * @brief Simple HTTP File Server using Qt only.
@@ -15,7 +16,7 @@ class SimpleHttpFileServer : public QObject
 {
     Q_OBJECT
 public:
-    explicit SimpleHttpFileServer(const QString& directory, int port, QObject* parent = nullptr);
+    explicit SimpleHttpFileServer(const QString& directory, int port, SiteManager* siteManager, QObject* parent = nullptr);
     ~SimpleHttpFileServer();
 
     bool start();
@@ -38,7 +39,7 @@ private slots:
 private:
     void handleRequest(QTcpSocket* socket);
     void sendDirectoryListing(QTcpSocket* socket, const QString& dirPath);
-    void sendFile(QTcpSocket* socket, const QString& fileName);
+    void sendFile(QTcpSocket* socket, const QString& fileName, bool websiteMode);
     void sendNotFound(QTcpSocket* socket);
     bool m_running = false;
 
@@ -46,6 +47,8 @@ private:
     int m_port;
     QTcpServer* m_server;
     QHash<QTcpSocket*, QByteArray> m_buffers;
+
+    SiteManager* m_siteManager = nullptr;
 };
 
 

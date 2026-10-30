@@ -4,7 +4,6 @@
 #include<QJsonObject>
 #include"chatmessage.h"
 
-// Chat session structure
 struct ChatSession {
     QString peerAddress;
     QString peerName;

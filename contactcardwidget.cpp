@@ -30,14 +30,12 @@ void ContactCardWidget::setupUi() {
     setMaximumHeight(70);
     QHBoxLayout* mainLayout = new QHBoxLayout(this);
 
-    // Status indicator (colored dot)
     statusDot = new QLabel(this);
     statusDot->setFixedSize(12, 12);
     statusDot->setProperty("status", "offline");
     statusDot->setStyleSheet("background-color: #ccc; border-radius: 6px;");
     mainLayout->addWidget(statusDot);
 
-    // Contact info
     QVBoxLayout* infoLayout = new QVBoxLayout();
     nameLabel = new QLabel(displayName, this);
     QFont nameFont = nameLabel->font();
@@ -50,7 +48,6 @@ void ContactCardWidget::setupUi() {
     infoLayout->setSpacing(2);
     mainLayout->addLayout(infoLayout, 1);
 
-    // Buttons layout
     QHBoxLayout* buttonsLayout = new QHBoxLayout();
     buttonsLayout->setSpacing(5);
 
@@ -63,7 +60,6 @@ void ContactCardWidget::setupUi() {
 
     deleteBtn = new QPushButton(this);
     deleteBtn->setIcon(style()->standardIcon(QStyle::SP_TrashIcon));
-    //deleteBtn->setIcon(style()->standardIcon(QStyle::SP_BrowserStop));
 
     deleteBtn->setFixedSize(25, 25);
     deleteBtn->setCursor(Qt::PointingHandCursor);
@@ -87,7 +83,6 @@ void ContactCardWidget::setupUi() {
         emit blockStatusChanged(onionAddress, blocked);
     });
     blockBtn->setIcon(style()->standardIcon(QStyle::SP_BrowserStop));
-    //blockBtn->setIcon(style()->standardIcon(QStyle::SP_DialogCloseButton));
 
     blockBtn->setFixedSize(25, 25);
     blockBtn->setCursor(Qt::PointingHandCursor);
@@ -146,7 +141,6 @@ void ContactCardWidget::updateStatusDisplay()
         return;
     }
 
-    // Add this check - don't override connected status
     if (isConnected) {
         return;  // Keep showing "Connected"
     }
@@ -168,7 +162,6 @@ void ContactCardWidget::paintEvent(QPaintEvent* event)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    // Draw background
     QColor bgColor;
     if (isSelected) {
         bgColor = QColor(230, 240, 255);
@@ -182,7 +175,6 @@ void ContactCardWidget::paintEvent(QPaintEvent* event)
     painter.setBrush(bgColor);
     painter.drawRoundedRect(rect(), 6, 6);
 
-    // Draw border if selected
     if (isSelected) {
         painter.setPen(QPen(QColor(100, 150, 255), 1));
         painter.setBrush(Qt::NoBrush);
@@ -244,7 +236,6 @@ void ContactCardWidget::setDisconnected() {
     connectBtn->setToolTip("Connect");
     statusDot->setStyleSheet("background-color: #FF5252; border-radius: 6px;");
     statusLabel->setText("Disconnected");
-    // Start or restart the offline timer
     if (!offlineTimer) {
         offlineTimer = new QTimer(this);
         offlineTimer->setSingleShot(true);

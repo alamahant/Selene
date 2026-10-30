@@ -1,7 +1,6 @@
 #include "chatsession.h"
 #include<QJsonArray>
 
-// ChatSession serialization
 QJsonObject ChatSession::toJson() const {
     QJsonObject obj;
     obj["peerAddress"] = peerAddress;

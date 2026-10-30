@@ -23,6 +23,7 @@ public slots:
 
 private:
     static QProcess* torProcess;
+    static void killStoredTorPid();
 
     static QStringList getPossibleTorPaths();
 public:

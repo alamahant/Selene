@@ -16,13 +16,11 @@ void ContactListWidget::setupUi()
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(10);
 
-    // Create a scroll area
     scrollArea = new QScrollArea(this);
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameShape(QFrame::NoFrame);
     scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    // Create content widget for the scroll area
     contentWidget = new QWidget(scrollArea);
     QVBoxLayout* contentLayout = new QVBoxLayout(contentWidget);
     contentLayout->setContentsMargins(10, 10, 10, 10);
@@ -41,13 +39,11 @@ void ContactListWidget::editContactName(const Contact &contact)
 
     if (contactCards.contains(contact.onionAddress)) {
         contactCards[contact.onionAddress]->updateCardDisplay(friendlyName);
-        // Update the card's display with new contact info
     }
 }
 
 void ContactListWidget::blockContact(const Contact &contact)
 { if (contactCards.contains(contact.onionAddress)) {
-        // Update the card's visual state to show blocked status
         contactCards[contact.onionAddress]->setEnabled(false);
     }
 
@@ -76,13 +72,11 @@ void ContactListWidget::addContact(const Contact& contact)
         }
 
     }
-    // Insert before the stretch
     QVBoxLayout* contentLayout = qobject_cast<QVBoxLayout*>(contentWidget->layout());
 
     contentLayout->insertWidget(contentLayout->count() - 1, card);
 
 
-    // Connect signals
     connect(card, &ContactCardWidget::selected, this, &ContactListWidget::onContactSelected);
     connect(card, &ContactCardWidget::checkAvailabilityRequested, [this, onion = contact.onionAddress]() {
         emit connectRequested(onion);
@@ -95,7 +89,6 @@ void ContactListWidget::addContact(const Contact& contact)
 
 
     contactCards[contact.onionAddress] = card;
-    //card->updateStatusDisplay();
 
 }
 
@@ -113,13 +106,11 @@ void ContactListWidget::updateContactLastSeen(const QString& onionAddress, const
 
 void ContactListWidget::refreshContacts(const QMap<QString, Contact>& contacts)
 {
-    // Clear existing contacts
     for (auto card : contactCards) {
         delete card;
     }
     contactCards.clear();
 
-    // Add all contacts
     for (auto it = contacts.begin(); it != contacts.end(); ++it) {
         addContact(it.value());
 
@@ -132,19 +123,16 @@ void ContactListWidget::refreshContacts(const QMap<QString, Contact>& contacts)
 void ContactListWidget::filterContacts(const QString& filter) {
     QVBoxLayout* contentLayout = qobject_cast<QVBoxLayout*>(contentWidget->layout());
 
-    // Remove all cards from layout (but don't delete them)
     for (auto card : contactCards) {
         contentLayout->removeWidget(card);
     }
 
     if (filter.isEmpty()) {
-        // Restore original layout
         for (auto card : contactCards) {
             contentLayout->insertWidget(contentLayout->count() - 1, card);
             card->show();
         }
     } else if (filter.startsWith("#b", Qt::CaseInsensitive)) {
-        // Show only blocked contacts
         for (auto card : contactCards) {
             if (card->getIsBlocked()) {
                 contentLayout->insertWidget(contentLayout->count() - 1, card);
@@ -154,7 +142,6 @@ void ContactListWidget::filterContacts(const QString& filter) {
             }
         }
     } else if (filter.startsWith("#c", Qt::CaseInsensitive)) {
-        // Search in comments
         QString commentFilter = filter.mid(2).trimmed();
         for (auto card : contactCards) {
             if (card->getComments().contains(commentFilter, Qt::CaseInsensitive)) {
@@ -164,9 +151,7 @@ void ContactListWidget::filterContacts(const QString& filter) {
                 card->hide();
             }
         }
-        //
     } else if (filter.startsWith("#o", Qt::CaseInsensitive)) {
-        // filter by onion address
         QString onionFilter = filter.mid(2).trimmed();
 
         for (auto card : contactCards) {
@@ -179,7 +164,6 @@ void ContactListWidget::filterContacts(const QString& filter) {
         }
 
     } else if (filter.startsWith("#g", Qt::CaseInsensitive)) {
-            // Filter by group
             QString groupFilter = filter.mid(2).trimmed();
             for (auto card : contactCards) {
                 if (card->getGroup().contains(groupFilter, Qt::CaseInsensitive)) {
@@ -191,7 +175,6 @@ void ContactListWidget::filterContacts(const QString& filter) {
             }
 
     } else {
-        // Default: filter by display name
         for (auto card : contactCards) {
             if (card->getDisplayName().contains(filter, Qt::CaseInsensitive)) {
                 contentLayout->insertWidget(contentLayout->count() - 1, card);
@@ -211,12 +194,10 @@ void ContactListWidget::onContactSelected()
     ContactCardWidget* card = qobject_cast<ContactCardWidget*>(sender());
     if (!card) return;
 
-    // Deselect previous
     if (!selectedContact.isEmpty() && contactCards.contains(selectedContact)) {
         contactCards[selectedContact]->setSelected(false);
     }
 
-    // Select new
     selectedContact = card->getOnionAddress();
     card->setSelected(true);
 
@@ -238,12 +219,10 @@ void ContactListWidget::setContactDisconnected(const QString& address) {
 
 void ContactListWidget::setSelectedContact(const QString& onionAddress)
 {
-    // Deselect previous
     if (!selectedContact.isEmpty() && contactCards.contains(selectedContact)) {
         contactCards[selectedContact]->setSelected(false);
     }
 
-    // Select new
     if (contactCards.contains(onionAddress)) {
         selectedContact = onionAddress;
         contactCards[onionAddress]->setSelected(true);

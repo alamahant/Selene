@@ -36,5 +36,6 @@
         <file>icons/navigation.svg</file>
         <file>icons/chrome.svg</file>
         <file>icons/shield.svg</file>
+        <file>icons/globe.svg</file>
     </qresource>
 </RCC>

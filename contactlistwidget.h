@@ -17,7 +17,6 @@ public:
 
     void addContact(const Contact& contact);
 
-    //void updateContactStatus(const QString& onionAddress, bool available);
     void updateContactLastSeen(const QString& onionAddress, const QDateTime& lastSeen);
     void refreshContacts(const QMap<QString, Contact>& contacts);
     void filterContacts(const QString& filter);

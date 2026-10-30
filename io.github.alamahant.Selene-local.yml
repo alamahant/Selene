@@ -1,6 +1,6 @@
 app-id: io.github.alamahant.Selene
 runtime: org.kde.Platform
-runtime-version: '6.9'
+runtime-version: '6.10'
 sdk: org.kde.Sdk
 command: Selene
 
@@ -11,6 +11,7 @@ finish-args:
   - --socket=pulseaudio
   - --device=dri
   - --share=network
+  - --filesystem=xdg-download:ro
   - --filesystem=xdg-documents/Selene:create
 
 modules:
@@ -19,6 +20,7 @@ modules:
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
       - -DFLATHUB_BUILD=ON
+      - -DBUILD_CURL=OFF
     sources:
       # libevent source code
       - type: git
@@ -30,8 +32,18 @@ modules:
         url: https://gitlab.torproject.org/tpo/core/tor.git
         tag: release-0.4.8
         dest: tor_src
+      - type: git
+        url: https://github.com/curl/curl.git
+        tag: curl-8_16_0
+        dest: curl_src
       # Main application source
       - type: dir
         path: .
-        #url: https://github.com/alamahant/Selene.git
-        #tag: v1.0.2
+
+    cleanup:
+      - /include
+      - /lib/*.a
+      - /share/doc
+      - /share/man
+      - /lib/cmake
+      - /lib/pkgconfig

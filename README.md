@@ -1,5 +1,5 @@
 
-# 🌸 Selene
+# Selene
 
 ![Selene Screenshot](screenshots/Selene-Chatting-in-action.png)
 
@@ -15,7 +15,7 @@ It enables secure, private communication and seamless file transfers between use
 
 ---
 
-## 🚀 Distribution
+## Distribution
 
 - **Flatpak:**  
   The initial release of Selene will be available on [Flathub](https://flathub.org/).
@@ -24,7 +24,7 @@ It enables secure, private communication and seamless file transfers between use
 
 ---
 
-## 🛠️ Key Features
+## Key Features
 
 - **True Peer-to-Peer Messaging:**  
   Messages travel exclusively over the Tor network, never leaving Tor at any point.
@@ -37,7 +37,7 @@ It enables secure, private communication and seamless file transfers between use
 
 ---
 
-## ✨ Feature Highlights
+## Feature Highlights
 
 - **Request New Tor Circuit:**  
   Instantly request a new Tor circuit to improve connectivity and reduce delays, ensuring reliable communication even in challenging network conditions.
@@ -80,20 +80,20 @@ It enables secure, private communication and seamless file transfers between use
 
 ---
 
-## 🖥️ Platform
+## Platform
 
 - **Built with:** Qt Framework
 - **Platform:** Cross-platform (Linux, Windows, others via Qt)
 
 ---
 
-## ❤️ About
+## About
 
 Selene is designed for privacy advocates and secure communication enthusiasts, offering a robust suite of features for confidential, flexible, and user-friendly Tor-based messaging and file sharing.
 
 ---
 
-## 📄 License
+## License
 
 This program is free software: you can redistribute it and/or modify  
 it under the terms of the GNU General Public License as published by  
@@ -112,7 +112,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 ---
 
-## 🙏 Credits
+## Credits
 
 **Framework:**  
 - Qt Framework (https://www.qt.io/)  
@@ -133,5 +133,5 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
   Licensed under the SIL Open Font License, Version 1.1  
   Copyright © 2013 Google Inc.
 
-_Made with ❤️ for privacy advocates and secure communication enthusiasts_
+
 

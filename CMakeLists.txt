@@ -212,6 +212,10 @@ find_package(OpenSSL REQUIRED)
         donationdialog.cpp donationdialog.h
         httpclientdialog.h httpclientdialog.cpp
         bridgemanagerdialog.h bridgemanagerdialog.cpp
+        sitemanager.cpp sitemanager.h
+        addsitedialog.cpp addsitedialog.h
+        sitemanager.cpp sitemanager.h
+        sitemanagerdialog.cpp sitemanagerdialog.h
 
     )
 # Define target properties for Android with Qt 6 as:

@@ -13,7 +13,6 @@ public:
     Notification(const QString& title, const QString& text, int duration = 3000,
                  QSystemTrayIcon::MessageIcon icon = QSystemTrayIcon::Information)
     {
-        // Use a static tray icon so it persists for the lifetime of the app
         static QSystemTrayIcon* tray = nullptr;
         if (!tray) {
             tray = new QSystemTrayIcon(QApplication::style()->standardIcon(QStyle::SP_MessageBoxInformation));

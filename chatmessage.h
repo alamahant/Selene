@@ -11,7 +11,6 @@ struct ChatMessage {
     bool isDelivered;
     bool isFromMe;
 
-    // --- File transfer support ---
     bool isFile = false;                // True if this is a file message
     QString fileName;                   // File name (if file message)
     qint64 fileSize = 0;                // File size in bytes

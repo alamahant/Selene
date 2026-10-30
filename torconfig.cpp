@@ -8,7 +8,6 @@ TorConfig::TorConfig()
 {
     QString appDir = getAppDataDir();
 
-    //QString appDir = QCoreApplication::applicationDirPath();
     hiddenServiceDir = appDir + "/.selene/hidden_service";
     fileHiddenServiceDir = appDir + "/.selene/file_hidden_service";
     torrcPath = appDir + "/.selene/torrc";
@@ -26,7 +25,6 @@ bool TorConfig::setupHiddenService()
     QDir dir(hiddenServiceDir);
     QFile torrcFile(torrcPath);
 
-    // Check if both exist with correct permissions
     if (dir.exists() && torrcFile.exists()) {
         QFile dirFile(hiddenServiceDir);
         if (dirFile.permissions() == (QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner) &&
@@ -36,7 +34,6 @@ bool TorConfig::setupHiddenService()
         }
     }
 
-    // Create and set permissions if needed
     if (!dir.exists()) {
         if (!QDir().mkpath(hiddenServiceDir)) {
             return false;
@@ -67,7 +64,6 @@ bool TorConfig::createTorrcEntry()
     QTextStream out(&torrc);
     out << "HiddenServiceDir " << hiddenServiceDir << "\n";
     out << "HiddenServicePort 80 127.0.0.1:8080\n";
-    // File sharing hidden service
     out << "HiddenServiceDir " << fileHiddenServiceDir << "\n";
     out << "HiddenServicePort 80 127.0.0.1:9090\n";
     out << "ControlPort 9051\n";
@@ -81,13 +77,11 @@ bool TorConfig::createTorrcEntry()
 bool TorConfig::readOnionAddress()
 {
     bool ok = true;
-    // do the chat hidden service
     for(int i = 0; i < 5; i++) {
         QFile hostname(hiddenServiceDir + "/hostname");
         if (hostname.exists() && hostname.open(QIODevice::ReadOnly | QIODevice::Text)) {
             onionAddress = QString(hostname.readAll()).trimmed();
             Logger::log(Logger::INFO, "Onion address loaded: " + onionAddress);
-            //return true;
             break;
         }
         QThread::sleep(1);
@@ -99,7 +93,6 @@ bool TorConfig::readOnionAddress()
 
     }
 
-    // do the http hidden service
     for (int i = 0; i < 5; i++) {
         QFile hostname(fileHiddenServiceDir + "/hostname");
         if (hostname.exists() && hostname.open(QIODevice::ReadOnly | QIODevice::Text)) {

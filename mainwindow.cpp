@@ -5,6 +5,7 @@
 #include <QWidget>
 #include <QDockWidget>
 #include<QClipboard>
+#include "sitemanager.h"
 #include"torprocess.h"
 #include<QScrollBar>
 #include<QSystemTrayIcon>
@@ -34,12 +35,15 @@
 #include"bridgemanagerdialog.h"
 #include<QDesktopServices>
 #include<QKeySequence>
+#include<QInputDialog>
+#include<QSpinBox>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , settings(QSettings())
     , bridgeDialog(new BridgeManagerDialog(this))
+    , m_siteManager(new SiteManager(this))
 
 {
 
@@ -50,25 +54,29 @@ MainWindow::MainWindow(QWidget *parent)
                                   .arg(DefaultHttpServicePort)
                                   .arg(DefaultControlPort)
                                   .arg(DefaultProxyPort));
-    httpClientDialog = new HttpClientDialog(this);
+
+
+    QString docRootPath = getWWWDir();
+    m_siteDialog = new SiteManagerDialog(m_siteManager, this);
+    m_siteManager->setFileShareRoot(docRootPath);
+    httpClientDialog = new HttpClientDialog(m_siteManager, this);
+    httpServer = new SimpleHttpFileServer(docRootPath, DefaultHttpServicePort, m_siteManager, this);
 
     ui->setupUi(this);
     setAcceptDrops(true);
 
     setWindowTitle("Selene - P2P Chat");
-    setWindowIcon(QIcon(":/icons/selene.png"));  // Resource or file path
+    setWindowIcon(QIcon(":/icons/selene.png"));
 
-    resize(1150, 750);
+    resize(1200, 750);
     isConnected = false;
     connectedPeerAddress = "";
     contactNameLabel = nullptr;
     contactAddressLabel = nullptr;
     contactCommentsLabel = nullptr;
 
-    //Delete temp www dirs
     cleanTmpWWWDirs();
 
-    // Initialize network components first
     if (torConfig.setupHiddenService()) {
         QString configPath = getAppDataDir() + "/.selene/torrc";
         if (TorProcess::startTor(configPath)) {
@@ -79,22 +87,16 @@ MainWindow::MainWindow(QWidget *parent)
         }
     }
 
+    httpOnionAddress = torConfig.getFileOnionAddress();
+
     contactManager = networkManager->getContactManager();
 
-    // Setup the UI components
-    //setupDockWidgets();
-    //setupChatArea();
     setupMainLayoutWithSplitter();
-    // Connect network signals
 
-    //connect(networkManager, &NetworkManager::connectionStatusChanged,
-      //      this, &MainWindow::handleConnectionStatus);
     connect(networkManager, &NetworkManager::connectionStatusChanged,
             this, [this](bool connected, const QString& peer) {
                 handleConnectionStatus(connected, peer);
             });
-    //connect(networkManager, SIGNAL(peerDisconnected()),
-      //      this, SLOT(handlePeerDisconnected()));
 
     connect(networkManager, &NetworkManager::peerDisconnected,
             this, &MainWindow::handlePeerDisconnected);
@@ -110,13 +112,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(this, &MainWindow::unknownContactMessageReceived,
             this, &MainWindow::handleUnknownContact);
 
-    // Create chat manager last (after UI is set up)
     chatManager = new ChatManager(this);
 
     setupChatManager();
     connect(chatManager, &ChatManager::messageAdded,
             this, &MainWindow::handleMessageAdded);
-    // Compose the full path for the chat history file
     QString appDataDir = getAppDataDir();
 
     QString historyFile = getChatHistoryFilePath();
@@ -124,7 +124,6 @@ MainWindow::MainWindow(QWidget *parent)
     if (QFile::exists(historyFile)) {
         bool loaded = chatManager->loadFromFile(historyFile);
     } else {
-        // do something
     }
 
     connect(contactListWidget, &ContactListWidget::editContactRequested, this, &MainWindow::handleEditContact);
@@ -150,12 +149,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     toolbar = getToolBar();
 
-    // Application exit tasks
     connect(qApp, &QCoreApplication::aboutToQuit, this, &MainWindow::handleAppExit);
-    // Http Server
-    QString docRootPath = getWWWDir();
-    //httpServer = new SimpleHttpFileServer(docRootPath, 9090, this);
-    httpServer = new SimpleHttpFileServer(docRootPath, DefaultHttpServicePort, this);
+
+
+
+
 
     QFile onionFile(getTorChatHiddenDirPath() + "/hostname");
     if (onionFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -163,22 +161,18 @@ MainWindow::MainWindow(QWidget *parent)
         onionFile.close();
     }
 
-    //clear history
     if (enableClearAllChatsCheckBox->isChecked()) {
         clearAllHistory();
     }
-    // mute sounds
     bool checked = muteSoundsCheckBox->isChecked();
     if(networkManager) {
         networkManager->setPlay(!checked);
         play = !checked;
     }
-    // play welcome note
     QTimer::singleShot(1000, this, [this]() {
     playSound(SoundType::MessageReceived, play);
     });
 
-    // enable logger
     bool enabled = enableLoggerCheckBox->isChecked();
     Logger::setLoggingEnabled(enabled);
 
@@ -194,17 +188,17 @@ MainWindow::MainWindow(QWidget *parent)
         updateBubbleFontSizes();
     });
 
+    setupCornerWidget();
 
     checkFirstRun();
+
 }
 
 void MainWindow::setupChatArea() {
-    // Create central widget
     centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
     QVBoxLayout* layout = new QVBoxLayout(centralWidget);
 
-    // Chat header with contact details
     QWidget* headerWidget = new QWidget(centralWidget);
     headerWidget->setObjectName("chatHeaderWidget");
     headerWidget->setStyleSheet("#chatHeaderWidget { background-color: #f5f5f5; border-radius: 8px; }");
@@ -214,14 +208,12 @@ void MainWindow::setupChatArea() {
     headerLayout->setSpacing(2);        // Space between each row (name, address, comments, group, status)
     headerLayout->setContentsMargins(8, 2, 8, 2);  // left, top, right, bottom
 
-    // Contact name (large, bold)
     contactNameLabel = new QLabel("No contact selected", headerWidget);
     QFont nameFont = contactNameLabel->font();
     nameFont.setBold(true);
     nameFont.setPointSize(nameFont.pointSize() + 1);
     contactNameLabel->setFont(nameFont);
 
-    // Contact address (with copy button)
     QHBoxLayout* addressLayout = new QHBoxLayout();
     contactAddressLabel = new QLabel("", headerWidget);
     contactAddressLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -245,7 +237,6 @@ void MainWindow::setupChatArea() {
     contactGroupLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     groupLayout->addWidget(contactGroupLabel, 1);
 
-    // Comments section
     QHBoxLayout* commentsLayout = new QHBoxLayout();
     commentsLayout->addWidget(new QLabel("Comments:", headerWidget));
     contactCommentsLabel = new QLabel("", headerWidget);
@@ -253,13 +244,11 @@ void MainWindow::setupChatArea() {
     contactCommentsLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     commentsLayout->addWidget(contactCommentsLabel, 1);
 
-    // Status indicator
     statusLabel = new QLabel("Mode: Tor", headerWidget);
     statusLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
     QHBoxLayout* nameLayout = new QHBoxLayout();
     nameLayout->addWidget(contactNameLabel);
-    //nameLayout->addWidget(contactStatusDot);
     nameLayout->addStretch();
 
     headerLayout->addLayout(nameLayout);        // 1. Name first
@@ -268,14 +257,12 @@ void MainWindow::setupChatArea() {
     headerLayout->addLayout(commentsLayout);    // 4. Comments fourth
     headerLayout->addWidget(statusLabel);       // 5. Status last
 
-    // Connection controls
     QWidget* connectionWidget = new QWidget(centralWidget);
     QHBoxLayout* connectionLayout = new QHBoxLayout(connectionWidget);
     peerAddressInput = new QLineEdit(connectionWidget);
     peerAddressInput->setPlaceholderText("Enter peer's onion address");
 
     connectButton = new QPushButton("Connect", connectionWidget);
-    // Open Chat button (new)
     openChatButton = new QPushButton("Open Chat", connectionWidget);
     openChatButton->setToolTip("Open chat tab without connecting");
 
@@ -283,7 +270,6 @@ void MainWindow::setupChatArea() {
     connectionLayout->addWidget(connectButton);
     connectionLayout->addWidget(openChatButton);
 
-    // Create tab widget instead of single chat display
     chatTabWidget = new QTabWidget(centralWidget);
     chatTabWidget->setTabsClosable(true);
 
@@ -291,7 +277,6 @@ void MainWindow::setupChatArea() {
         QString address = peerAddressInput->text().trimmed();
         if (address.isEmpty())
             return;
-        // Open the chat tab without connecting
         openChatTabForPeer(address);
     });
 
@@ -301,22 +286,16 @@ void MainWindow::setupChatArea() {
         chatTabWidget->removeTab(index);
     });
 
-    // Keep the original chatDisplay for compatibility with existing code
-    // but don't add it directly to the layout
     chatDisplay = new QTextBrowser();
 
-    // Message input area
     inputWidget = new QWidget(centralWidget);
     QHBoxLayout* inputLayout = new QHBoxLayout(inputWidget);
     messageInput = new QTextEdit(inputWidget);
     messageInput->setFixedHeight(50);
-    // set font
 
-    //
     messageInput->setPlaceholderText("Type your message...\n'Send' button or Ctrl+Enter to send");
     sendButton = new QPushButton("Send", inputWidget);
     fileButton = new QPushButton("Send File", inputWidget);
-    //encryption checkbox
     encryptCheckBox = new QCheckBox(inputWidget);
     encryptCheckBox->setToolTip("Encrypt messages to this peer");
 
@@ -324,7 +303,6 @@ void MainWindow::setupChatArea() {
     connect(encryptCheckBox, &QCheckBox::toggled, this, &MainWindow::onEncryptToggled);
 
 
-    // Add emoji button and dialog
     setupEmojiPickerDialog();
 
     inputLayout->addWidget(messageInput);
@@ -333,17 +311,14 @@ void MainWindow::setupChatArea() {
     inputLayout->addWidget(fileButton);
     inputLayout->addWidget(encryptCheckBox);
 
-    // Add all components to main layout
     layout->addWidget(headerWidget);
     layout->addWidget(connectionWidget);
     layout->addWidget(chatTabWidget, 1); // Give chat tab widget more stretch
     layout->addWidget(inputWidget);
 
-    // Connect signals
     connect(sendButton, &QPushButton::clicked, this, &MainWindow::sendMessage);
 
 
-    // Ctrl + Return
     auto ctrlShortcutReturn = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Return), this);
     connect(ctrlShortcutReturn, &QShortcut::activated, this, [this]() {
         if (sendButton) sendButton->click();
@@ -353,25 +328,24 @@ void MainWindow::setupChatArea() {
     connect(connectButton, &QPushButton::clicked, this, &MainWindow::connectToPeer);
     connect(chatTabWidget, &QTabWidget::currentChanged, this, &MainWindow::handleTabChanged);
 
-    // Update status with onion address
     QString onion = torConfig.getOnionAddress();
     if (!onion.isEmpty()) {
         updateStatus("Connected as: " + onion);
     }
+
+
 }
 
 
 
 MainWindow::~MainWindow() {
-    // Clean up network connections first
     if (networkManager) {
         networkManager->cleanup();
     }
 
-    // Stop Tor process
-    TorProcess::stopTor();
     if(TorProcess::torInstance){
         delete TorProcess::torInstance;
+        TorProcess::torInstance = nullptr;
     }
     if (emojiPicker) {
         delete emojiPicker;
@@ -386,7 +360,6 @@ MainWindow::~MainWindow() {
         delete httpServer;
         httpServer = nullptr;
     }
-    // Delete UI
     delete ui;
 
 }
@@ -399,14 +372,11 @@ void MainWindow::updateStatus(const QString& status) {
 void MainWindow::connectToPeer() {
 
 
-    // This is a connect request
     QString address = peerAddressInput->text().trimmed();
 
-    // Check if we're already connected to this peer
     if (networkManager->isPeerConnected(address)) {
         networkManager->setActiveConnection(address);  // Add this line
 
-        // This is a disconnect request
         networkManager->disconnectFromPeer(address);
         return;
     }
@@ -415,45 +385,36 @@ void MainWindow::connectToPeer() {
         return;
     }
 
-    // Check if we're already connected to this peer
     if (networkManager->isPeerConnected(address)) {
         QMessageBox::information(this, "Already Connected",
                                  "You are already connected to this peer. Switching to existing conversation.");
-        // Just switch to the existing tab
         switchToTab(address);
         return;
     }
 
 
 
-    // Add a small delay to ensure sockets are properly closed
     QApplication::processEvents();
 
-    // Now try to connect
-    statusBar()->showMessage("Connecting to peer. Please wait up to 20 seconds...", 6 * 1000);
-    // Show tray notification
-    Notification("Connecting", "Connecting to peer. Please wait up to 20 seconds...");
+    statusBar()->showMessage("Connecting to peer. Please wait up to 30 seconds...", 6 * 1000);
+    Notification("Connecting", "Connecting to peer. Please wait up to 30 seconds...");
 
 
 
     if (networkManager->connectToPeer(address)) {
-        // Connection successful, create a tab if it doesn't exist
         if (!chatDisplays.contains(address)) {
             createChatTab(address);
 
         } else {
-            // If tab exists, just switch to it
             switchToTab(address);
 
         }
 
-        // Create a chat session if it doesn't exist
         if (!chatManager->getAllSessionPeers().contains(address)) {
             QString peerName = networkManager->getFriendlyName(address);
             chatManager->createSession(address, peerName);
         }
 
-        // Activate the session
         chatManager->activateSession(address);
     } else {
 
@@ -477,7 +438,6 @@ void MainWindow::handleConnectionStatus(bool connected, const QString& peerAddre
 
 
 void MainWindow::handlePeerConnected(const QString& peerAddress) {
-    // Update UI to show connected state for this specific peer
 
 
     if (peerAddressInput->text().trimmed() == peerAddress) {
@@ -530,16 +490,13 @@ void MainWindow::handleNetworkError(const QString& error) {
 }
 
 void MainWindow::onPeerIdentified(const QString& peerOnion) {
-    // Update status label
     statusLabel->setText("Connected");
 
-    // Ensure we have a chat session for this peer
     if (!chatManager->getAllSessionPeers().contains(peerOnion)) {
         QString peerName = networkManager->getFriendlyName(peerOnion);
         chatManager->createSession(peerOnion, peerName);
     }
 
-    // Activate the session
     chatManager->activateSession(peerOnion);
 
 }
@@ -554,18 +511,14 @@ void MainWindow::onAddContactClicked() {
 
 
 void MainWindow::onContactSelected(const QString& onionAddress) {
-    // Set the peer address input
     peerAddressInput->setText(onionAddress);
 
-    // Update connection state for this specific peer
     bool isPeerConnected = networkManager->isPeerConnected(onionAddress);
     connectButton->setText(isPeerConnected ? "Disconnect" : "Connect");
     peerAddressInput->setEnabled(!isPeerConnected);
 
-    // Get contact details from contact manager
     Contact contact = contactManager->getContact(onionAddress);
 
-    // Update contact details in header
     if (!contact.friendlyName.isEmpty()) {
         contactNameLabel->setText(contact.friendlyName);
     } else {
@@ -585,7 +538,6 @@ void MainWindow::onContactSelected(const QString& onionAddress) {
         contactCommentsLabel->setText("No comments");
     }
 
-    // Update status
     /*
     if (!contact.friendlyName.isEmpty()) {
         statusLabel->setText("Selected contact: " + contact.friendlyName);
@@ -597,7 +549,6 @@ void MainWindow::onContactSelected(const QString& onionAddress) {
 
 
 
-    // Switch to the corresponding tab if it exists
     for (int i = 0; i < chatTabWidget->count(); i++) {
         if (chatTabWidget->tabToolTip(i) == onionAddress) {
             chatTabWidget->setCurrentIndex(i);
@@ -605,7 +556,6 @@ void MainWindow::onContactSelected(const QString& onionAddress) {
         }
     }
     contactListWidget->setSelectedContact(onionAddress);
-    // Update encryption checkbox to match the contact's setting
     encryptCheckBox->blockSignals(true);
     encryptCheckBox->setChecked(contact.encryptionEnabled);
     encryptCheckBox->blockSignals(false);
@@ -626,19 +576,13 @@ void MainWindow::updateContactsList() {
 }
 
 void MainWindow::setupDockWidgets() {
-    // Create contacts dock widget
     contactsDock = new QDockWidget(tr("Contacts"), this);
     contactsDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
     contactsDock->setFeatures(QDockWidget::DockWidgetMovable);
-    //contactsDock->setMinimumWidth(300);
     contactsDock->setMinimumWidth(40);
 
-    // Create widget for dock content
-    //QWidget* dockContent = new QWidget(contactsDock);
-    //QVBoxLayout* dockLayout = new QVBoxLayout(dockContent);
     dockContent = new QWidget(contactsDock);
     dockLayout = new QVBoxLayout(dockContent);
-    // Add search box
     searchContactsEdit = new QLineEdit(dockContent);
     searchContactsEdit->setPlaceholderText(tr("🔍 Search contacts"));
 
@@ -654,18 +598,15 @@ void MainWindow::setupDockWidgets() {
     dockLayout->addWidget(searchContactsEdit);
 
 
-    // Add contacts list
     contactListWidget = new ContactListWidget(dockContent);
     dockLayout->addWidget(contactListWidget);
 
-    // Add button for adding contacts
     QPushButton* addContactBtn = new QPushButton(tr("+ Add Contact"), dockContent);
     dockLayout->addWidget(addContactBtn);
 
     contactsDock->setWidget(dockContent);
     addDockWidget(Qt::LeftDockWidgetArea, contactsDock);
 
-    // Connect signals
     connect(searchContactsEdit, &QLineEdit::textChanged,
             contactListWidget, &ContactListWidget::filterContacts);
     connect(addContactBtn, &QPushButton::clicked,
@@ -677,29 +618,21 @@ void MainWindow::setupDockWidgets() {
 
 
 
-    // Load contacts
     contactListWidget->refreshContacts(networkManager->getContacts());
 }
 
 
 void MainWindow::setupChatManager()
 {
-    // Connect signals
     connect(chatManager, &ChatManager::messageAdded,
             this, [this](const QString& peerAddress, const ChatMessage& message) {
 
-                // If we have a tab for this peer, render all messages properly
                 if (chatDisplays.contains(peerAddress)) {
                     QScrollArea* display = chatDisplays[peerAddress];  // Changed from QTextBrowser*
-                    // add event filter for increasing font size
-                    //display->viewport()->installEventFilter(this);
 
 
-                    // Use the chat manager's scroll area rendering method
-                    //chatManager->renderMessagesToScrollArea(peerAddress, display);  // method call to rerender all msgs
                     chatManager->renderMessageToScrollArea(peerAddress, display, message, m_bubbleFontSize);  // Changed method call for appending single msg
 
-                    // Highlight tab if it's not the current one
                     int currentIndex = chatTabWidget->currentIndex();
                     for (int i = 0; i < chatTabWidget->count(); i++) {
                         QWidget* widget = chatTabWidget->widget(i);
@@ -720,13 +653,10 @@ void MainWindow::connectToContact(const QString& onionAddress) {
     onContactSelected(onionAddress);
     statusLabel->setText(tr("Connecting to %1...").arg(onionAddress));
 
-    // Set the peer address
     peerAddressInput->setText(onionAddress);
 
-    // Connect to the peer
     connectToPeer();
 
-    // Create a chat session if connection successful
     if (isConnected) {
         QString peerName = networkManager->getFriendlyName(onionAddress);
         chatManager->createSession(onionAddress, peerName);
@@ -735,43 +665,32 @@ void MainWindow::connectToContact(const QString& onionAddress) {
 }
 
 void MainWindow::handleIncomingMessage(const QString& senderAddress, const QString& message) {
-    // Get the actual sender address
     QString actualSenderAddress = senderAddress;
 
-    // If sender address is empty, use the connected peer address as fallback
     if (actualSenderAddress.isEmpty()) {
         actualSenderAddress = networkManager->getConnectedPeerAddress();
 
-        // If still empty, we can't process this message
         if (actualSenderAddress.isEmpty()) {
             return;
         }
     }
 
-    // Ensure we have a chat session
     if (!chatManager->getAllSessionPeers().contains(actualSenderAddress)) {
-        // Get friendly name if this is a known contact
         QString senderName = networkManager->getFriendlyName(actualSenderAddress);
 
-        // If not a known contact, use the address as the name
         if (senderName.isEmpty()) {
             senderName = actualSenderAddress;
-            // Optionally, you could prompt the user to add this contact
             emit unknownContactMessageReceived(actualSenderAddress);
         }
 
-        // Create the session regardless
         chatManager->createSession(actualSenderAddress, senderName);
     }
 
-    // Activate the session if not active
     if (chatManager->getActiveSessionPeer() != actualSenderAddress) {
         chatManager->activateSession(actualSenderAddress);
     }
 
-    // Add message to chat
     chatManager->addMessage(actualSenderAddress, message, false);
-    //playSound(SoundType::MessageReceived);
 
 }
 
@@ -779,17 +698,14 @@ void MainWindow::handleIncomingMessage(const QString& senderAddress, const QStri
 void MainWindow::handleUnknownContact(const QString& senderAddress) {
 
 
-    //playSound(SoundType::UnknownContact);
     createChatTab(senderAddress);
     switchToTab(senderAddress);
-    // System tray notification
     Notification("Unknown Peer", "Received a message from: " + senderAddress);
 
     addContact(senderAddress);
 }
 
 void MainWindow::handleMessageAdded(const QString& peerAddress, const ChatMessage& message) {
-    // If this is the active session, update the display
     if (chatManager->getActiveSessionPeer() == peerAddress) {
     }
 
@@ -797,27 +713,22 @@ void MainWindow::handleMessageAdded(const QString& peerAddress, const ChatMessag
 
 
 void MainWindow::createChatTab(const QString& onionAddress) {
-    // Check if tab already exists - KEEP original
     if (chatDisplays.contains(onionAddress)) {
         switchToTab(onionAddress);
         return;
     }
 
-    // Get friendly name for the tab label - KEEP original
     QString friendlyName = networkManager->getFriendlyName(onionAddress);
     if (friendlyName.isEmpty() || friendlyName == onionAddress) {
         friendlyName = "Unknown (" + onionAddress.left(8) + "...)";
     }
 
-    // Create a widget to hold the tab contents - KEEP original
     QWidget* tabWidget = new QWidget(chatTabWidget);
     chatTabWidgets[onionAddress] = tabWidget;
 
 
     QVBoxLayout* tabLayout = new QVBoxLayout(tabWidget);
 
-    // Create a scroll area for this tab - CHANGED from QTextBrowser
-    //QScrollArea* scrollArea = new QScrollArea(tabWidget);
     scrollArea = new QScrollArea(tabWidget);
 
     scrollArea->setWidgetResizable(true);
@@ -828,20 +739,15 @@ void MainWindow::createChatTab(const QString& onionAddress) {
 
     tabLayout->addWidget(scrollArea);
 
-    // Store the scroll area in our map - CHANGED from textBrowser
     chatDisplays[onionAddress] = scrollArea;
 
-    // Add the tab to the tab widget - KEEP original
     int index = chatTabWidget->addTab(tabWidget, friendlyName);
     chatTabWidget->setTabToolTip(index, onionAddress);
 
-    // Switch to this tab - KEEP original
     chatTabWidget->setCurrentIndex(index);
 
-    // Update header with contact info - KEEP original
     updateContactInfo(onionAddress);
 
-    // CHANGED: Use ChatManager for rendering existing messages to scroll area
     if (chatManager->getAllSessionPeers().contains(onionAddress)) {
         chatManager->renderMessagesToScrollArea(onionAddress, scrollArea, m_bubbleFontSize);
 
@@ -862,7 +768,6 @@ void MainWindow::switchToTab(const QString& onionAddress) {
 
     int index = -1;
 
-    // Find the tab index
     for (int i = 0; i < chatTabWidget->count(); i++) {
         if (chatTabWidget->widget(i)->layout()->itemAt(0)->widget() == textBrowser) {
             index = i;
@@ -894,8 +799,6 @@ void MainWindow::handleEditContact(const QString &onion) {
     onionInput->setReadOnly(true);
     QLineEdit* nameInput = new QLineEdit(currentContact.friendlyName, &dialog);
     QTextEdit* publicKeyInput = new QTextEdit(currentContact.publicKey, &dialog);
-    //QTextEdit* publicKeyInput = new QTextEdit(&dialog);
-    //publicKeyInput->setPlaceholderText("Current public key not displayed");
     bool encryptionEnabled = currentContact.encryptionEnabled;
     QLineEdit* commentsInput = new QLineEdit(currentContact.comments, &dialog);
     QLineEdit* groupInput = new QLineEdit(currentContact.group, &dialog);
@@ -919,7 +822,6 @@ void MainWindow::handleEditContact(const QString &onion) {
         QString newKey = publicKeyInput->toPlainText();
 
         updatedContact.publicKey = newKey.isEmpty() ? currentContact.publicKey : newKey;
-        //updatedContact.publicKey = publicKeyInput->toPlainText(); // text()
         updatedContact.comments = commentsInput->text();
         updatedContact.group = groupInput->text();
         updatedContact.encryptionEnabled = encryptionEnabled;
@@ -928,7 +830,6 @@ void MainWindow::handleEditContact(const QString &onion) {
         Notification("Contact Updated", "Updated contact: " + updatedContact.friendlyName);
 
 
-        //checkAndUpdateContacts();
         updateContactsList();
 
         if (chatManager->getChatSessions().contains(onion)) {
@@ -941,16 +842,13 @@ void MainWindow::handleEditContact(const QString &onion) {
 
 void MainWindow::addContact(const QString &sendersOnion, const QJsonObject &contact)
 {
-    // Reset last added contact name just to be safe
     lastAddedContactFriendlyName.clear();
-    // Prevent multiple dialogs for the same onion address
     if (m_addContactDialogsOpen.contains(sendersOnion)) {
         return;
     }
     m_addContactDialogsOpen.insert(sendersOnion);
 
 
-    // Create the dialog on the heap so it persists after this function returns
     QDialog* dialog = new QDialog(this);
     QFormLayout* form = new QFormLayout(dialog);
 
@@ -977,12 +875,10 @@ void MainWindow::addContact(const QString &sendersOnion, const QJsonObject &cont
     form->addRow("Comments:", commentsInput);
     form->addRow("Group:", groupInput);
 
-    // If called by handleunknown versus manually by clicking on buttgon
     if (!sendersOnion.isEmpty()) {
         onionInput->setText(sendersOnion);
     }
 
-    // for enabling drop of .contact file
     if (!contact.isEmpty()) {
         if (contact.contains("onion"))
             onionInput->setText(contact.value("onion").toString());
@@ -997,9 +893,7 @@ void MainWindow::addContact(const QString &sendersOnion, const QJsonObject &cont
     }
 
 
-    //
 
-    // --- Import Contact Button ---
     QPushButton* importContactBtn = new QPushButton("Import Contact", dialog);
     importContactBtn->setToolTip("Import Contact from a File");
     form->addRow(importContactBtn);
@@ -1030,13 +924,11 @@ void MainWindow::addContact(const QString &sendersOnion, const QJsonObject &cont
         }
         QJsonObject obj = doc.object();
 
-        // Validate required fields
         if (!obj.contains("onion") || !obj.contains("name")) {
             QMessageBox::warning(dialog, tr("Import Failed"), tr("Contact file missing required fields."));
             return;
         }
 
-        // Populate fields
         onionInput->setText(obj.value("onion").toString());
         nameInput->setText(obj.value("name").toString());
         publicKeyInput->setPlainText(obj.value("public_key").toString());
@@ -1056,9 +948,7 @@ void MainWindow::addContact(const QString &sendersOnion, const QJsonObject &cont
     QDialogButtonBox* buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, dialog);
     form->addRow(buttonBox);
 
-    //connect(buttonBox, &QDialogButtonBox::accepted, dialog, &QDialog::accept);
     connect(buttonBox, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
-    // Custom handler for Ok
     connect(buttonBox, &QDialogButtonBox::accepted, this, [=]() {
         if (onionInput->text().isEmpty() || nameInput->text().isEmpty()) {
             QMessageBox::warning(dialog, tr("Missing Fields"), tr("Onion and name are mandatory."));
@@ -1073,10 +963,8 @@ void MainWindow::addContact(const QString &sendersOnion, const QJsonObject &cont
             QMessageBox::warning(dialog, tr("Invalid Name"), tr("The name must not contain '.onion'."));
             return;
         }
-        // All fields valid, accept dialog
         dialog->accept();
     });
-    // Handle accepted signal non-modally
     connect(dialog, &QDialog::accepted, this, [=]() {
         if(onionInput->text().isEmpty() || nameInput->text().isEmpty()) {
             QMessageBox::warning(dialog, tr("Missing Fields"), tr("Onion and name are mandatory."));
@@ -1098,15 +986,12 @@ void MainWindow::addContact(const QString &sendersOnion, const QJsonObject &cont
         Notification("Contact Added", "Added contact: " + newContact.friendlyName);
 
 
-        //checkAndUpdateContacts();
         updateContactsList();
 
-        //lastAddedContactFriendlyName = newContact.friendlyName;
         if (chatManager->getChatSessions().contains(sendersOnion)) {
             chatManager->getChatSessions()[sendersOnion].peerName = newContact.friendlyName;
         }
 
-        // Rename the tab here:
         QWidget* tabWidget = chatTabWidgets.value(sendersOnion, nullptr);
         if (tabWidget) {
             int idx = chatTabWidget->indexOf(tabWidget);
@@ -1115,8 +1000,6 @@ void MainWindow::addContact(const QString &sendersOnion, const QJsonObject &cont
         }
     });
 
-    // Clean up dialog if cancelled.--- not needed handled in the next connect
-    //connect(dialog, &QDialog::rejected, dialog, &QDialog::deleteLater);
 
     dialog->setAttribute(Qt::WA_DeleteOnClose); // Ensure dialog is deleted when closed
     dialog->show(); // Non-modal
@@ -1149,7 +1032,6 @@ void MainWindow::handleBlockContact(const QString &onion) {
         }
 
     }
-    //checkAndUpdateContacts();
     updateContactsList();
 
 }
@@ -1168,7 +1050,6 @@ void MainWindow::handleDeleteContact(const QString &onion)
         contactManager->deleteContact(onion);
         Notification("Contact Deleted", "Deleted contact: " + onion);
 
-        //checkAndUpdateContacts();
         updateContactsList();
 
     }
@@ -1178,7 +1059,6 @@ void MainWindow::handleDeleteContact(const QString &onion)
 void MainWindow::handleTabChanged(int index) {
     if (index < 0) return;
 
-    // Find which onion address corresponds to this tab - UPDATED for QScrollArea
     QString onionAddress;
     QWidget* tabWidget = chatTabWidget->widget(index);
     QScrollArea* scrollArea = qobject_cast<QScrollArea*>(  // CHANGED from QTextBrowser*
@@ -1192,30 +1072,22 @@ void MainWindow::handleTabChanged(int index) {
     }
 
     if (!onionAddress.isEmpty()) {
-        // Set this as the active connection - KEEP original
         networkManager->setActiveConnection(onionAddress);
 
-        // Also update ChatManager's active session - KEEP original
         chatManager->activateSession(onionAddress);
 
-        // Update contact info in the header - KEEP original
         updateContactInfo(onionAddress);
 
-        // CHANGED: Re-render messages with scroll area formatting
         if (chatManager->getAllSessionPeers().contains(onionAddress)) {
             chatManager->renderMessagesToScrollArea(onionAddress, scrollArea, m_bubbleFontSize);  // CHANGED method and parameter
             chatManager->markAsRead(onionAddress);
         }
 
-        // ADD: Clear tab highlight - KEEP original
         QString friendlyName = networkManager->getFriendlyName(onionAddress);
         chatTabWidget->setTabText(index, friendlyName);
 
-        // Update status dot based on connection status - KEEP original
         if (networkManager->isPeerConnected(onionAddress)) {
-            //contactStatusDot->setStyleSheet("background-color: #4CAF50; border-radius: 8px;"); // Green dot
         } else {
-            //contactStatusDot->setStyleSheet("background-color: #BDBDBD; border-radius: 8px;"); // Gray dot
         }
 
 
@@ -1229,14 +1101,12 @@ void MainWindow::sendMessage() {
     QString message = messageInput->toPlainText().trimmed();
     if (message.isEmpty()) return;
 
-    // Get the current onion address
     QString currentOnion = networkManager->getConnectedPeerAddress();
     if (currentOnion.isEmpty()) {
         QMessageBox::warning(this, "Cannot Send", "No active connection.");
         return;
     }
 
-    //encrypt
     QString unencryptedMessage = message;
     if (encryptCheckBox->isChecked()) {
         QString encrypted = encryptMessageForPeer(currentOnion, message);
@@ -1246,16 +1116,12 @@ void MainWindow::sendMessage() {
         }
         message = encrypted;
     }
-    //
 
-    // Send the message - KEEP  original logic
         networkManager->sendMessage(message);
 
-    // CHANGED: Always use ChatManager for proper rendering
     if (chatManager->getAllSessionPeers().contains(currentOnion)) {
         chatManager->addMessage(currentOnion, unencryptedMessage, true);
     } else {
-        // Create session if it doesn't exist
         QString peerName = networkManager->getFriendlyName(currentOnion);
         chatManager->createSession(currentOnion, peerName);
         chatManager->addMessage(currentOnion, unencryptedMessage, true);
@@ -1263,7 +1129,6 @@ void MainWindow::sendMessage() {
 
 
 
-    // scrol to the bottom
     QScrollBar* vScrollBar = scrollArea->verticalScrollBar();
     if (vScrollBar) {
         vScrollBar->setValue(vScrollBar->maximum());
@@ -1274,21 +1139,17 @@ void MainWindow::sendMessage() {
 
 void MainWindow::updateContactInfo(const QString& onionAddress) {
     if (onionAddress.isEmpty()) {
-        // No contact selected, clear the header
         contactNameLabel->setText("No contact selected");
         contactAddressLabel->setText("");
         contactCommentsLabel->setText("");
         contactGroupLabel->setText("");
-        //contactStatusDot->setStyleSheet("background-color: #BDBDBD; border-radius: 8px;"); // Light gray
         return;
     }
 
-    // Get contact information from the contact manager
     QString friendlyName = networkManager->getFriendlyName(onionAddress);
     QString comments = "";
     QString group = "";
 
-    // If we have a contact manager with additional info
     ContactManager* contactManager = networkManager->getContactManager();
     if (contactManager) {
         Contact contact = contactManager->getContact(onionAddress);
@@ -1300,19 +1161,14 @@ void MainWindow::updateContactInfo(const QString& onionAddress) {
         }
     }
 
-    // Update the header labels
     contactNameLabel->setText(friendlyName);
     contactAddressLabel->setText(onionAddress);
     contactCommentsLabel->setText(comments);
     contactGroupLabel->setText(group.isEmpty() ? "Ungrouped" : group);
-    // Check if this specific peer is connected
     if (networkManager->isPeerConnected(onionAddress)) {
-        //contactStatusDot->setStyleSheet("background-color: #4CAF50; border-radius: 8px;"); // Green dot
     } else {
-        //contactStatusDot->setStyleSheet("background-color: #F44336; border-radius: 8px;"); // Red dot
     }
 
-    // Update window title to include contact name
     setWindowTitle("Selene - P2PChat - " + friendlyName);
 }
 
@@ -1331,7 +1187,6 @@ void MainWindow::handleMessageReceived(const QString& senderOnion, const QString
         chatManager->createSession(senderOnion, senderName);
     }
 
-    //decrypt
     if (contactManager->getContact(senderOnion).encryptionEnabled) {
         QString decrypted = decryptMessageFromPeer(senderOnion, message);
         if (!decrypted.isEmpty()) {
@@ -1340,13 +1195,10 @@ void MainWindow::handleMessageReceived(const QString& senderOnion, const QString
             displayMessage = "[Failed to decrypt message]";
         }
     }
-    //
     chatManager->addMessage(senderOnion, displayMessage, false);
 
 
-    //playSound(SoundType::MessageReceived);
 
-    // KEEP your original tab highlighting logic
     int tabIndex = -1;
     QScrollArea* textBrowser = chatDisplays[senderOnion];
     for (int i = 0; i < chatTabWidget->count(); i++) {
@@ -1360,7 +1212,6 @@ void MainWindow::handleMessageReceived(const QString& senderOnion, const QString
     }
 
     if (tabIndex >= 0 && tabIndex != chatTabWidget->currentIndex()) {
-        // You could change the tab text color or add an icon to indicate new messages
         chatTabWidget->setTabText(tabIndex, "* " + networkManager->getFriendlyName(senderOnion));
     }
 
@@ -1371,7 +1222,6 @@ void MainWindow::handleMessageReceived(const QString& senderOnion, const QString
     }
     */
 
-    // Scroll to bottom of the CORRECT scroll area
     if (chatDisplays.contains(senderOnion)) {
         QScrollArea* scrollArea = chatDisplays[senderOnion];  // Get the right scroll area
         QScrollBar* vScrollBar = scrollArea->verticalScrollBar();
@@ -1403,8 +1253,8 @@ QToolBar* MainWindow::getToolBar() {
     toolbar->addAction(startServerAction);
     toolbar->addAction(stopServerAction);
     toolbar->addAction(restartServerAction);
-    //toolbar->addAction(newHttpOnionAction);
     toolbar->addAction(openHttpClientAction);
+    toolbar->addAction(openSiteManagerAction);
     toolbar->addSeparator();
     QLabel *chatLabel = new QLabel(this);
     chatLabel->setText("Chat");
@@ -1413,8 +1263,6 @@ QToolBar* MainWindow::getToolBar() {
     toolbar->addAction(getContactsDirPathAction);
     toolbar->addAction(clearCurrentHistoryAction);
     toolbar->addAction(clearAllHistoryAction);
-    //toolbar->addAction(newChatOnionAction);
-    // Chat status combo box
     statusCombo = new QComboBox(this);
     statusCombo->setObjectName("statusCombo");
     statusCombo->addItem("Available", true);  // true for Available
@@ -1426,9 +1274,7 @@ QToolBar* MainWindow::getToolBar() {
                 this->networkManager->availableForChat = isAvailable;
             });
     toolbar->addWidget(statusCombo);
-    //add font size combo
     addFontSizeCombo();
-    // export my info
     toolbar->addAction(exportMyInfoAction);
 
     toolbar->addSeparator();
@@ -1437,7 +1283,6 @@ QToolBar* MainWindow::getToolBar() {
     toolbar->addWidget(encryptionLabel);
     toolbar->addAction(copyPubKeyAction);
     toolbar->addAction(createKeypairAction);
-    // Create rsa bits combo box and populate it
     rsaBitsCombo = new QComboBox(this);
     rsaBitsCombo->setObjectName("rsaBitsCombo");
     rsaBitsCombo->setToolTip("Select number of bits to be used with the new RSA key");
@@ -1446,13 +1291,6 @@ QToolBar* MainWindow::getToolBar() {
     rsaBitsCombo->addItem("8192", 8192);
     toolbar->addWidget(rsaBitsCombo);
 
-    //reset
-    //toolbar->addSeparator();
-    //QLabel *resetLabel = new QLabel(this);
-    //resetLabel->setText("Reset");
-    //toolbar->addWidget(resetLabel);
-    //toolbar->addAction(factoryResetAction);
-    //Logger
     toolbar->addSeparator();
     QLabel *loggerLabel = new QLabel(this);
     loggerLabel->setText("Logger");
@@ -1460,7 +1298,6 @@ QToolBar* MainWindow::getToolBar() {
     toolbar->addAction(toggleLoggingAction);
     toolbar->addAction(logViewerAction);
     toolbar->addSeparator();
-    //toolbar->addAction(toggleMenuBarAction);
     toolbar->addAction(muteAction);
 
     return toolbar;
@@ -1469,13 +1306,11 @@ QToolBar* MainWindow::getToolBar() {
 
 void MainWindow::handleAppExit()
 {
-    //QSettings settings;
     if (settings.value("autoClearHistoryOnExit", false).toBool()) {
         clearAllHistory();
     }
     chatManager->saveToFile(getChatHistoryFilePath());
 
-    // Add other shutdown/cleanup tasks here as needed
 }
 
 void MainWindow::openChatTabForPeer(const QString& onionAddress) {
@@ -1488,7 +1323,6 @@ void MainWindow::openChatTabForPeer(const QString& onionAddress) {
 }
 
 QStringList MainWindow::getAllEmojiResources() {
-    // List of popular emoji Unicode characters
     return QStringList()
            << "😀" << "😁" << "😂" << "🤣" << "😃" << "😄" << "😅" << "😆" << "😉" << "😊"
            << "😋" << "😎" << "😍" << "😘" << "🥰" << "😗" << "😙" << "😚" << "🙂" << "🤗"
@@ -1514,13 +1348,10 @@ QStringList MainWindow::getAllEmojiResources() {
 
 void MainWindow::setupEmojiPickerDialog()
 {
-    // 1. Load emoji resources
     emojiPaths = getAllEmojiResources();
 
-    // 2. Create the emoji picker widget (only once)
     emojiPicker = new EmojiPickerWidget(emojiPaths, this);
 
-    // 3. Load the emoji font
     int fontId = QFontDatabase::addApplicationFont(":/emojis/NotoColorEmoji.ttf");
     if (fontId == -1) {
         qWarning() << "Failed to load NotoColorEmoji.ttf!";
@@ -1529,36 +1360,30 @@ void MainWindow::setupEmojiPickerDialog()
     if (!loadedFamilies.isEmpty()) {
     }
 
-    // 4. Set the font for the input widget (messageInput)
     QFont font = messageInput->font();
     font.setFamily(font.family() + ", Noto Color Emoji");
     font.setPointSize(12); // Adjust as needed
     messageInput->setFont(font);
 
-    // 5. Connect emoji picker selection to message input
     connect(emojiPicker, &EmojiPickerWidget::emojiSelected, this, [this](const QString& emoji) {
         QTextCursor cursor = messageInput->textCursor();
         cursor.insertText(emoji);
         messageInput->setTextCursor(cursor);
 
-        // Optionally close the picker dialog if needed
         if (emojiPicker->parentWidget() && emojiPicker->parentWidget()->inherits("QDialog")) {
             emojiPicker->parentWidget()->close();
         }
     });
 
-    // 6. Create the emoji button
     emojiButton = new QPushButton(inputWidget);
     emojiButton->setText("😊"); // Or set an icon if you prefer
     emojiButton->setFixedWidth(32);
 
-    // 7. Create the picker dialog (only once)
     pickerDialog = new QDialog(nullptr);
     pickerDialog->setWindowFlags(Qt::Dialog);
     pickerDialog->setAttribute(Qt::WA_DeleteOnClose, false); // We want to reuse the dialog
     pickerDialog->setAttribute(Qt::WA_TranslucentBackground, true);
 
-    // Style the dialog and buttons
     pickerDialog->setStyleSheet(R"(
         QDialog {
             background: #23272e;
@@ -1574,7 +1399,6 @@ void MainWindow::setupEmojiPickerDialog()
         }
     )");
 
-    // Add scroll area for the emoji picker
     QScrollArea* scrollArea = new QScrollArea(pickerDialog);
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameShape(QFrame::NoFrame);
@@ -1588,12 +1412,9 @@ void MainWindow::setupEmojiPickerDialog()
     dlgLayout->setContentsMargins(8, 8, 8, 8);
     dlgLayout->addWidget(scrollArea);
 
-    // Set a reasonable fixed size for the dialog
     pickerDialog->setFixedSize(350, 300);
 
-    // 8. Connect emoji button to show the picker dialog
     connect(emojiButton, &QPushButton::clicked, this, [this]() {
-        // Position the dialog below the emoji button
         QPoint globalPos = emojiButton->mapToGlobal(QPoint(0, emojiButton->height()));
         pickerDialog->move(globalPos);
         pickerDialog->raise();
@@ -1624,18 +1445,14 @@ void MainWindow::cleanTmpWWWDirs()
 
 
 
-// sendfile with encryption
 void MainWindow::sendFile()
 {
-    // 1. Open file dialog in the "files" directory, allow multiple selection
     QString startDir = getFileSaveDirPath();
     QStringList filePaths = QFileDialog::getOpenFileNames(this, tr("Select File(s) to Share"), startDir);
 
-    // 2. Check if user selected files
     if (filePaths.isEmpty())
         return;
 
-    // 3. Get the current peer onion address (same as sendMessage uses)
     QString peerOnion = networkManager->getConnectedPeerAddress();
     if (peerOnion.isEmpty()) {
         QMessageBox::warning(this, tr("No Connection"),
@@ -1643,19 +1460,16 @@ void MainWindow::sendFile()
         return;
     }
 
-    // 4. Create a UUID directory inside www
     QString wwwDir = getWWWDir();
     QString uuidDirName = QUuid::createUuid().toString(QUuid::WithoutBraces);
     QString destDirPath = wwwDir + QDir::separator() + uuidDirName;
     QDir().mkpath(destDirPath);
 
-    // 5. Copy/encrypt selected files into the UUID directory
     for (const QString& filePath : filePaths) {
         QFileInfo fileInfo(filePath);
         QString destFilePath;
 
         if (encryptCheckBox->isChecked()) {
-            // Encrypt the file for the current peer
             QString encryptedBundlePath = encryptFileForPeer(filePath, peerOnion);
             if (encryptedBundlePath.isEmpty()) {
                 QMessageBox::warning(this, tr("Encryption Error"),
@@ -1664,22 +1478,18 @@ void MainWindow::sendFile()
                 return;
             }
 
-            // Copy the encrypted bundle to the destination directory
             destFilePath = destDirPath + QDir::separator() + fileInfo.fileName() + ".encbundle";
             if (!QFile::copy(encryptedBundlePath, destFilePath)) {
                 QMessageBox::warning(this, tr("File Copy Error"),
                                    tr("Failed to copy encrypted file %1").arg(fileInfo.fileName()));
                 QDir(destDirPath).removeRecursively();
-                // Clean up temporary encrypted bundle
                 QFile::remove(encryptedBundlePath);
                 return;
             }
 
-            // Clean up temporary encrypted bundle
             QFile::remove(encryptedBundlePath);
 
         } else {
-            // No encryption - just copy the original file
             destFilePath = destDirPath + QDir::separator() + fileInfo.fileName();
             if (!QFile::copy(filePath, destFilePath)) {
                 QMessageBox::warning(this, tr("File Copy Error"),
@@ -1690,28 +1500,22 @@ void MainWindow::sendFile()
         }
     }
 
-    // 6. Build the onion URL for the shared directory
     QString onionBase = torConfig.getFileOnionAddress();
     QString url = onionBase + "/" + uuidDirName + "/";
 
-    // 7. If encrypted, add a note to the message
     QString messageText = url;
     if (encryptCheckBox->isChecked()) {
-        //messageText += "\n[Encrypted files - use decryption to open]";
     }
 
-    // 8. Send the URL as a message using your existing sendMessage logic
     messageInput->setPlainText(messageText);
     sendMessage();  // This will handle encryption of the URL message if needed
 
-    // 9. Start/restart server
     if (httpServer->isRunning()) {
         httpServer->restart();
     } else {
         httpServer->start();
     }
 
-    // 10. Show confirmation with encryption status
     QString confirmation = tr("Files have been shared at:\n%1").arg(url);
     if (encryptCheckBox->isChecked()) {
         confirmation += tr("\n\nFiles are encrypted for the current peer.");
@@ -1727,14 +1531,12 @@ void MainWindow::playSound(SoundType type, bool playIt)
     if (!playIt) return;
 
     if (!m_soundEffects.contains(type)) {
-        // Create and cache the sound effect for this type
         QSoundEffect* effect = new QSoundEffect(this);
         effect->setSource(QUrl("qrc" + soundResourcePath(type)));
         effect->setVolume(0.8);
         m_soundEffects[type] = effect;
     }
     QSoundEffect* effect = m_soundEffects[type];
-    // If already playing, stop and replay
     if (effect->isPlaying()) {
         effect->stop();
     }
@@ -1749,14 +1551,12 @@ void MainWindow::clearCurrentTabHistory() {
     QString onion = chatTabWidget->tabToolTip(index);
     if (onion.isEmpty()) return;
 
-    // Clear the chat display UI
     if (chatDisplays.contains(onion)) {
         QScrollArea* scrollArea = chatDisplays[onion];
         QWidget* container = scrollArea->widget();
         if (container) {
             QLayout* layout = container->layout();
             if (layout) {
-                // Remove and delete all message bubble widgets
                 while (QLayoutItem* item = layout->takeAt(0)) {
                     if (QWidget* w = item->widget()) {
                         w->deleteLater();
@@ -1768,19 +1568,16 @@ void MainWindow::clearCurrentTabHistory() {
         }
     }
 
-    // Remove from chatManager/history
     chatManager->clearHistoryForPeer(onion);
 }
 
 void MainWindow::clearAllHistory() {
-    // Clear all chat displays
     for (auto display : chatDisplays) {
         QScrollArea* scrollArea = display;
         QWidget* container = scrollArea->widget();
         if (container) {
             QLayout* layout = container->layout();
             if (layout) {
-                // Remove and delete all message bubble widgets
                 while (QLayoutItem* item = layout->takeAt(0)) {
                     if (QWidget* w = item->widget()) {
                         w->deleteLater();
@@ -1792,10 +1589,8 @@ void MainWindow::clearAllHistory() {
         }
     }
 
-    // Clear all history in chatManager
     chatManager->clearAllHistory();
 
-    // Optionally, delete the global history file
     QFile::remove(getChatHistoryFilePath());
 }
 
@@ -1812,12 +1607,10 @@ void MainWindow::setupMenuBar()
     fileMenu->addSeparator();
 
     fileMenu->addAction("&Exit", this, &QWidget::close, QKeySequence::Quit);
-    // --- Tor Menu ---
     QMenu* torMenu = menubar->addMenu(tr("Tor"));
     newCircuitAction->setText(tr("New Tor Circuit"));
     torMenu->addAction(newCircuitAction);
 
-    // --- HTTP Server Menu ---
     QMenu* httpMenu = menubar->addMenu(tr("HTTP Server"));
 
 
@@ -1844,10 +1637,10 @@ void MainWindow::setupMenuBar()
 
     openHttpClientAction->setText("Open Http Client");
     httpMenu->addAction(openHttpClientAction);
-    //httpMenu->addSeparator();
 
+    openSiteManagerAction->setText("Open Websites Manager");
+    httpMenu->addAction(openSiteManagerAction);
 
-    // --- Chat Menu ---
     QMenu* chatMenu = menubar->addMenu(tr("Chat"));
     clearCurrentHistoryAction->setText(tr("Clear Current Chat"));
     chatMenu->addAction(clearCurrentHistoryAction);
@@ -1860,35 +1653,26 @@ void MainWindow::setupMenuBar()
     newChatOnionAction->setText(tr("New Chat Onion"));
     chatMenu->addAction(newChatOnionAction);
 
-    // Add Copy Public Key and Create Key Pair actions to Chat menu
     copyPubKeyAction->setText(tr("Copy My Public Key"));
     chatMenu->addAction(copyPubKeyAction);
 
     createKeypairAction->setText(tr("Create New Key Pair"));
     chatMenu->addAction(createKeypairAction);
 
-    // Add Export My Info action if not already present
     exportMyInfoAction->setText(tr("Export My Info"));
     chatMenu->addAction(exportMyInfoAction);
 
-    // Add Copy Onion Address action if not already present
     copyOnionAction->setText(tr("Copy Chat Onion URL"));
     chatMenu->addAction(copyOnionAction);
 
-    // --- Settings Menu ---
     QMenu* settingsMenu = menubar->addMenu(tr("Settings"));
     factoryResetAction->setText(tr("Factory Reset"));
     settingsMenu->addAction(factoryResetAction);
 
     settingsMenu->addSeparator();
 
-    //toggleMenuBarAction->setText(tr("Show/Hide Menu Bar"));
-    //settingsMenu->addAction(toggleMenuBarAction);
 
-    // --- Add Checkboxes for Settings ---
-    // QWidgetAction allows embedding widgets (like QCheckBox) in menus
 
-    // 1. Enable/Disable "Clear All Chats"
     QWidgetAction* enableClearAllChatsWidgetAction = new QWidgetAction(this);
     enableClearAllChatsCheckBox = new QCheckBox(tr("Enable 'Clear All Chats'"));
 
@@ -1909,7 +1693,6 @@ void MainWindow::setupMenuBar()
     QWidgetAction* muteSoundsWidgetAction = new QWidgetAction(this);
     muteSoundsCheckBox = new QCheckBox(tr("Mute Sounds"));
 
-    // Read from QSettings
 
     bool muteEnabled = settings.value("muteSoundsEnabled", false).toBool();
     muteSoundsCheckBox->setChecked(muteEnabled);
@@ -1924,11 +1707,9 @@ void MainWindow::setupMenuBar()
         muteAction->setChecked(checked);
     });
 
-    // --- Enable/Disable Logger ---
     QWidgetAction* enableLoggerWidgetAction = new QWidgetAction(this);
     enableLoggerCheckBox = new QCheckBox(tr("Enable Logger"));
 
-    // Read from QSettings
     bool loggerEnabled = settings.value("loggerEnabled", true).toBool();
     enableLoggerCheckBox->setChecked(loggerEnabled);
     toggleLoggingAction->setChecked(loggerEnabled);
@@ -1945,19 +1726,15 @@ void MainWindow::setupMenuBar()
 
 
 
-    // --- Security Menu (if present) ---
     if (securityManager) {
         securityManager->setupSecurityMenu(menubar);
     }
 
-    // --- Log Viewer (if not already present) ---
-    // You may want to add a Log Viewer action to the Settings menu
     if (logViewerAction && !settingsMenu->actions().contains(logViewerAction)) {
         logViewerAction->setText(tr("View Log"));
         settingsMenu->addAction(logViewerAction);
     }
 
-    // --- Edit Torrc Ports (if not already present) ---
     if (editTorrcPortsAction && !settingsMenu->actions().contains(editTorrcPortsAction)) {
         editTorrcPortsAction->setText(tr("Edit Torrc Ports"));
         settingsMenu->addAction(editTorrcPortsAction);
@@ -1966,12 +1743,155 @@ void MainWindow::setupMenuBar()
     openBridgeDialogAction->setText("Open Bridge manager");
     settingsMenu->addAction(openBridgeDialogAction);
 
+
+    settingsMenu->addSeparator();
+    QAction* scaleAction = settingsMenu->addAction("Set &Scale...");
+    scaleAction->setShortcut(QKeySequence("Ctrl+Shift+S"));
+    connect(scaleAction, &QAction::triggered, this, [this]() {
+        QSettings settings;
+        bool ok = false;
+        double current = settings.value("ui/scaleFactor", 1.0).toDouble();
+
+        double factor = QInputDialog::getDouble(
+            this, tr("UI Scale"),
+            tr("Scale factor (e.g. 0.9, 1.0, 1.1, 1.25):"),
+            current,          // initial value
+            0.5,              // min
+            3.0,              // max
+            2,                // decimals shown
+            &ok,
+            Qt::WindowFlags(),
+            0.05);             // ← step
+
+        if (!ok) return;
+
+        settings.setValue("ui/scaleFactor", factor);
+        settings.sync();
+
+        QMessageBox msg(this);
+        msg.setWindowTitle(tr("Restart Required"));
+        msg.setIcon(QMessageBox::Information);
+        msg.setText(tr("Please restart the application to apply the new scale."));
+        msg.setInformativeText(tr(
+            "If the new scale makes the app unusable, delete the settings file:\n\n%1\n\n"
+            "Note: this will reset all user-defined settings.")
+            .arg(QSettings().fileName()));
+
+
+        QPushButton *copyBtn   = msg.addButton(tr("Copy Command"), QMessageBox::ActionRole);
+        QPushButton *cancelBtn = msg.addButton(tr("Cancel"), QMessageBox::RejectRole);
+        QPushButton *okBtn     = msg.addButton(tr("OK"), QMessageBox::AcceptRole);
+
+        for (;;) {
+            msg.exec();
+            if (msg.clickedButton() != copyBtn)
+                break;
+
+        #ifdef Q_OS_WIN
+            const QString cmd = QString("Remove-Item \"%1\"").arg(QSettings().fileName());
+        #else
+            const QString cmd = QString("rm \"%1\"").arg(QSettings().fileName());
+        #endif
+            QGuiApplication::clipboard()->setText(cmd);
+
+            msg.setInformativeText(tr(
+                "Command copied to clipboard:\n\n%1\n\n"
+                "If the new scale makes the app unusable, delete the settings file above.")
+                .arg(cmd));
+        }
+
+        if (msg.clickedButton() == okBtn)
+            qApp->quit();
+
+    });
+
+    settingsMenu->addSeparator();
+    QAction* fontAction = settingsMenu->addAction("Set &Font Size...");
+    fontAction->setShortcut(QKeySequence("Ctrl+Shift+F"));
+    connect(fontAction, &QAction::triggered, this, [this]() {
+        QSettings settings;
+
+        QMessageBox box(this);
+        box.setWindowTitle(tr("Font Size"));
+        box.setIcon(QMessageBox::NoIcon);
+        box.setText(tr("Point size (e.g. 9, 10, 12, 14):"));
+
+        QSpinBox *spin = new QSpinBox(&box);
+        spin->setRange(6, 32);
+        spin->setSingleStep(1);
+
+        double current = settings.value("ui/fontSize", 0.0).toDouble();
+        if (current <= 0.0)
+            current = qApp->font().pointSizeF();
+        spin->setValue(qRound(current));
+
+        if (auto *grid = qobject_cast<QGridLayout*>(box.layout())) grid->addWidget(spin, 1, 1);
+        QPushButton *okBtn     = box.addButton(QMessageBox::Ok);
+        QPushButton *cancelBtn = box.addButton(QMessageBox::Cancel);
+        QPushButton *defaultBtn = box.addButton(tr("Default"), QMessageBox::ResetRole);
+        box.setDefaultButton(okBtn);
+
+        box.exec();
+
+        qreal size;
+        if (box.clickedButton() == defaultBtn) {
+            size = DEFAULTFONTSIZE;
+        } else if (box.clickedButton() == okBtn) {
+            size = spin->value();
+        } else {
+            return;   // Cancel
+        }
+
+        FONTSIZE = size;
+        settings.setValue("ui/fontSize", size);
+        settings.sync();
+
+        QFont f = qApp->font();
+        f.setPointSizeF(size);
+        qApp->setFont(f);
+        qApp->setStyleSheet(qApp->styleSheet());
+    });
+
+    settingsMenu->addSeparator();
+    QAction *resetAction = settingsMenu->addAction(tr("Reset Settings..."));
+    connect(resetAction, &QAction::triggered, this, [this]() {
+        QSettings s;
+        const QString path = s.fileName();
+
+        const auto reply = QMessageBox::warning(
+            this,
+            tr("Reset Settings"),
+            tr("This will delete your settings file:\n\n%1\n\n"
+               "Restart the application for changes to take effect.\n\n"
+               "Continue?").arg(path),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No);
+
+        if (reply != QMessageBox::Yes)
+            return;
+
+        s.sync();                          // flush pending writes
+
+        const bool ok = !QFile::exists(path) || QFile::remove(path);
+
+        if (ok) {
+            QMessageBox::information(
+                this,
+                tr("Settings Reset"),
+                tr("Settings deleted.\n\nRestart the app for changes to take effect."));
+        } else {
+            QMessageBox::critical(
+                this,
+                tr("Settings Reset Failed"),
+                tr("Could not delete:\n\n%1\n\nCheck file permissions.").arg(path));
+        }
+    });
+
     QMenu* helpMenu = menubar->addMenu(tr("Help"));
 
     QAction* aboutAction = new QAction(tr("About"), this);
     helpMenu->addAction(aboutAction);
 
-    // 2. Connect the About action to show the HelpMenuDialog
     connect(aboutAction, &QAction::triggered, this, [this]() {
         HelpMenuDialog dialog(HelpType::About, this);
         dialog.exec();
@@ -1980,27 +1900,22 @@ void MainWindow::setupMenuBar()
     QAction* featuresAction = new QAction(tr("Features"), this);
     helpMenu->addAction(featuresAction);
 
-    // 2. Connect the About action to show the HelpMenuDialog
     connect(featuresAction, &QAction::triggered, this, [this]() {
         HelpMenuDialog dialog(HelpType::Features, this);
         dialog.exec();
     });
 
-    //
     QAction* changelogAction = new QAction(tr("Changelog"), this);
     helpMenu->addAction(changelogAction);
 
-    // 2. Connect the About action to show the HelpMenuDialog
     connect(changelogAction, &QAction::triggered, this, [this]() {
         HelpMenuDialog dialog(HelpType::WhatsNew, this);
         dialog.exec();
     });
-    //
 
     QAction* instructionsAction = new QAction(tr("Instructions"), this);
     helpMenu->addAction(instructionsAction);
 
-    // 2. Connect the About action to show the HelpMenuDialog
     connect(instructionsAction, &QAction::triggered, this, [this]() {
         HelpMenuDialog dialog(HelpType::Instructions, this);
         dialog.exec();
@@ -2009,7 +1924,6 @@ void MainWindow::setupMenuBar()
     QAction* supportusAction = new QAction(tr("Support Us"), this);
     helpMenu->addAction(supportusAction);
 
-    // 2. Connect the supportus  action to show the HelpMenuDialog
     connect(supportusAction, &QAction::triggered, this, [this]() {
         DonationDialog dialog(this);
         dialog.exec();
@@ -2019,11 +1933,8 @@ void MainWindow::setupMenuBar()
 
 void MainWindow::setupActions()
 {
-    // Use style for standard icons
     QStyle* style = this->style();
 
-    // New Tor Circuit
-    //newCircuitAction = new QAction(style->standardIcon(QStyle::SP_BrowserReload), tr(""), this);
     newCircuitAction = new QAction(QIcon(":/icons/refresh-cw.svg"), tr(""), this);
 
     newCircuitAction->setObjectName("newcircuit");
@@ -2032,22 +1943,19 @@ void MainWindow::setupActions()
         TorProcess::torInstance->newTorCircuit();
     });
 
-    // Copy Server Onion
-    //getHttpOnionAction = new QAction(style->standardIcon(QStyle::SP_FileDialogContentsView), tr(""), this);
     getHttpOnionAction = new QAction(QIcon(":/icons/copy.svg"), tr(""), this);
 
     getHttpOnionAction->setObjectName("gethttponion");
     getHttpOnionAction->setToolTip(tr("Copy HTTP server onion address"));
     connect(getHttpOnionAction, &QAction::triggered, this, [this]() {
         QString onionAddress = torConfig.getFileOnionAddress();
+        httpOnionAddress = onionAddress;
         QClipboard* clipboard = QGuiApplication::clipboard();
         clipboard->setText(onionAddress);
         QMessageBox::information(this, tr("Onion Address Copied"),
                                  tr("The HTTP file-sharing onion address has been copied to your clipboard:\n%1").arg(onionAddress));
     });
 
-    // Copy WWW Dir
-    //getWWWDirAction = new QAction(style->standardIcon(QStyle::SP_DirIcon), tr(""), this);
     getWWWDirAction = new QAction(QIcon(":/icons/folder.svg"), tr(""), this);
 
     getWWWDirAction->setObjectName("getwwwdir");
@@ -2060,7 +1968,6 @@ void MainWindow::setupActions()
                                  tr("The HTTP server file-sharing path has been copied to your clipboard:\n%1").arg(wwwDirPath));
     });
 
-    // get contacts dir path
     getContactsDirPathAction = new QAction(QIcon(":/icons/folder.svg"), tr(""), this);
 
     getContactsDirPathAction->setObjectName("getcontactsdir");
@@ -2072,10 +1979,7 @@ void MainWindow::setupActions()
         QMessageBox::information(this, tr("Contacts Directory path copied"),
                                  tr("The Contacts directory path has been copied to your clipboard:\n%1").arg(contactsPath));
     });
-    //
 
-    // Start HTTP Server
-    //startServerAction = new QAction(style->standardIcon(QStyle::SP_MediaPlay), tr(""), this);
     startServerAction = new QAction(QIcon(":/icons/play.svg"), tr(""), this);
 
     startServerAction->setObjectName("startserver");
@@ -2086,8 +1990,6 @@ void MainWindow::setupActions()
         Notification(tr("HTTP Server started"), tr("The HTTP server has started\n"));
     });
 
-    // Stop HTTP Server
-    //stopServerAction = new QAction(style->standardIcon(QStyle::SP_MediaStop), tr(""), this);
     stopServerAction = new QAction(QIcon(":/icons/stop-circle.svg"), tr(""), this);
 
     stopServerAction->setObjectName("stopserver");
@@ -2098,8 +2000,6 @@ void MainWindow::setupActions()
         Notification(tr("HTTP Server stopped"), tr("The HTTP server has stopped\n"));
     });
 
-    // Restart HTTP Server
-    //restartServerAction = new QAction(style->standardIcon(QStyle::SP_BrowserReload), tr(""), this);
     restartServerAction = new QAction(QIcon(":/icons/refresh-cw.svg"), tr(""), this);
 
     restartServerAction->setObjectName("restartserver");
@@ -2112,8 +2012,6 @@ void MainWindow::setupActions()
     });
 
 
-    // New HTTP Onion
-    //newHttpOnionAction = new QAction(style->standardIcon(QStyle::SP_FileDialogNewFolder), tr(""), this);
     newHttpOnionAction = new QAction(QIcon(":/icons/folder-plus.svg"), tr(""), this);
 
     newHttpOnionAction->setObjectName("newhttponion");
@@ -2141,7 +2039,6 @@ void MainWindow::setupActions()
     });
 
 
-    //httpclient
     openHttpClientAction = new QAction(QIcon(":/icons/chrome.svg"), tr(""), this);
 
     openHttpClientAction->setObjectName("openhttpclient");
@@ -2149,15 +2046,11 @@ void MainWindow::setupActions()
     connect(openHttpClientAction, &QAction::triggered, this, [this]() {
         httpClientDialog->show();
     });
-    //
 
-    // Clear Current Chat
-    //clearCurrentHistoryAction = new QAction(style->standardIcon(QStyle::SP_TrashIcon), tr(""), this);
     clearCurrentHistoryAction = new QAction(QIcon(":/icons/trash.svg"), tr(""), this);
 
     clearCurrentHistoryAction->setObjectName("clearcurrentchat");
     clearCurrentHistoryAction->setToolTip(tr("Clear current chat history"));
-    // Read enabled/disabled state from QSettings
 
 
     connect(clearCurrentHistoryAction, &QAction::triggered, this, [this]() {
@@ -2165,8 +2058,6 @@ void MainWindow::setupActions()
         QMessageBox::information(this, tr("Chat Cleared"), tr("Current chat history has been cleared."));
     });
 
-    // Clear All Chats
-    //clearAllHistoryAction = new QAction(style->standardIcon(QStyle::SP_TrashIcon), tr(""), this);
     clearAllHistoryAction = new QAction(QIcon(":/icons/trash-2.svg"), tr(""), this);
 
     clearAllHistoryAction->setObjectName("clearallchats");
@@ -2177,8 +2068,6 @@ void MainWindow::setupActions()
     });
 
 
-    // New Chat Onion
-    //newChatOnionAction = new QAction(style->standardIcon(QStyle::SP_FileDialogNewFolder), tr(""), this);
     newChatOnionAction = new QAction(QIcon(":/icons/file-plus.svg"), tr(""), this);
 
     newChatOnionAction->setObjectName("newchatonion");
@@ -2206,8 +2095,6 @@ void MainWindow::setupActions()
             );
     });
 
-    // Factory Reset
-    //factoryResetAction = new QAction(style->standardIcon(QStyle::SP_DialogResetButton), tr(""), this);
     factoryResetAction = new QAction(QIcon(":/icons/rotate-ccw.svg"), tr(""), this);
 
     factoryResetAction->setObjectName("factoryreset");
@@ -2217,8 +2104,6 @@ void MainWindow::setupActions()
 
 
 
-    // Toggle Menu Bar
-    //toggleMenuBarAction = new QAction(style->standardIcon(QStyle::SP_TitleBarMenuButton), tr(""), this);
     toggleMenuBarAction = new QAction(QIcon(":/icons/menu.svg"), tr(""), this);
 
     toggleMenuBarAction->setObjectName("togglemenubar");
@@ -2232,8 +2117,6 @@ void MainWindow::setupActions()
     });
 
 
-    // get public key
-    //copyPubKeyAction = toolbar->addAction("Copy My Public Key");
     copyPubKeyAction = new QAction(QIcon(":/icons/clipboard.svg"), tr(""), this);
 
     copyPubKeyAction->setObjectName("copypublickey");
@@ -2252,8 +2135,6 @@ void MainWindow::setupActions()
 
         statusLabel->setText("Public key copied to clipboard");
     });
-    // generate key pair
-    //createKeypairAction = toolbar->addAction("Create New Key Pair");
     createKeypairAction = new QAction(QIcon(":/icons/key.svg"), tr(""), this);
     createKeypairAction->setObjectName("createnewkeypair");
     createKeypairAction->setToolTip("Generate a new public/private key pair (will overwrite existing keys)");
@@ -2261,7 +2142,6 @@ void MainWindow::setupActions()
     connect(createKeypairAction, &QAction::triggered, this, [this]() {
         this->onCreateNewKeypair();
     });
-    // export my info
     exportMyInfoAction = new QAction(QIcon(":/icons/file-text.svg"), tr(""), this);
     exportMyInfoAction->setObjectName("exportmyinfo");
     exportMyInfoAction->setToolTip("Export your contact information to a .contact file");
@@ -2269,12 +2149,10 @@ void MainWindow::setupActions()
     connect(exportMyInfoAction, &QAction::triggered, this, [this]() {
         this->exportMyInfo();
     });
-    // copy chat onion url
     copyOnionAction = new QAction(QIcon(":/icons/copy.svg"), tr(""), this);
     copyOnionAction->setObjectName("copyonionaddress");
     copyOnionAction->setToolTip("Copy your Chat service onion address to clipboard");
 
-    // Connect the action
     connect(copyOnionAction, &QAction::triggered, this, [this]() {
         QString myOnion;
         QFile onionFile(getTorChatHiddenDirPath() + "/hostname");
@@ -2291,20 +2169,17 @@ void MainWindow::setupActions()
             QMessageBox::warning(this, tr("Copy Failed"), tr("Could not retrieve your onion address."));
         }
     });
-    //logging on/off
     toggleLoggingAction = new QAction(QIcon(":/icons/stop-circle.svg"), tr(""), this);
     toggleLoggingAction->setObjectName("togglelogging");
     toggleLoggingAction->setToolTip("Enable or disable application logging");
     toggleLoggingAction->setCheckable(true);
     toggleLoggingAction->setChecked(true); // Assume logging is enabled by default
 
-    // Connect the toggled signal to enable/disable logging
     connect(toggleLoggingAction, &QAction::toggled, this, [this](bool checked) {
         Logger::setLoggingEnabled(checked);
         if (checked) {
             toggleLoggingAction->setIcon(QIcon(":/icons/stop-circle.svg"));
             toggleLoggingAction->setToolTip("Stop Logging");
-            // Tray notification for logging enabled
             Notification("Logging Enabled", "Application logging is now enabled.");
 
 
@@ -2316,10 +2191,8 @@ void MainWindow::setupActions()
             Notification("Logging Disabled", "Application logging is now disabled.");
 
 
-            //QMessageBox::information(nullptr, QObject::tr("Logging Disabled"), QObject::tr("Application logging is now disabled."));
         }
     });
-    // edit torrc inner ports action
     editTorrcPortsAction = new QAction(QIcon(":/icons/edit.svg"), tr(""), this);
     editTorrcPortsAction->setObjectName("editTorrcPorts");
     editTorrcPortsAction->setToolTip(
@@ -2332,35 +2205,25 @@ void MainWindow::setupActions()
     connect(editTorrcPortsAction, &QAction::triggered, this, [this]() {
         this->editTorrcPortsDialog();
     });
-    // logviewer
     logViewerAction = new QAction(QIcon(":/icons/eye.svg"), tr(""), this);
     logViewerAction->setShortcut(QKeySequence("Ctrl+L"));
     connect(logViewerAction, &QAction::triggered, this, [this]() {
         QString logPath = getAppDataDir() + "/chat.log";
         LogViewerDialog dlg(logPath, this);
 
-        // get state of toggle
         bool checked = toggleLoggingAction->isChecked();
-        // stop logger
         toggleLoggingAction->setChecked(false);
         dlg.exec();
-        // restore to initial state
         toggleLoggingAction->setChecked(checked);
 
     });
-    // mute-unmute sounds
-    // Create the Mute action
     muteAction = new QAction(QIcon(":/icons/volume-2.svg"), tr("Mute"), this);
     muteAction->setCheckable(true);
     muteAction->setChecked(false); // Start unchecked (not muted)
 
-    // Optional: set a shortcut, e.g., Ctrl+M
     muteAction->setShortcut(QKeySequence("Ctrl+M"));
 
-    // Connect the toggled signal to networkManager->setPlay
     connect(muteAction, &QAction::toggled, this, [this](bool checked) {
-        // If checked, we want to mute, so setPlay(false)
-        // If unchecked, unmute, so setPlay(true)
         if (networkManager) networkManager->setPlay(!checked);
 
         if(checked) {
@@ -2381,19 +2244,25 @@ void MainWindow::setupActions()
 
         bridgeDialog->show();
     });
+
+    openSiteManagerAction = new QAction(QIcon(":/icons/globe.svg"),"Open Websites Manager",  this);
+    openSiteManagerAction->setToolTip("Open Websites Manager");
+    connect(openSiteManagerAction, &QAction::triggered, this, [this]{
+
+        m_siteDialog->show();
+        m_siteDialog->raise();
+
+    });
 }
 
 
-//crypto
 
 void MainWindow::onCreateNewKeypair()
 {
-    // Ensure the combo box exists
     if (!rsaBitsCombo) {
         QMessageBox::critical(this, "Error", "RSA bits combo box not found.");
         return;
     }
-    // get rsaBits from combobox
     int rsaBits = rsaBitsCombo->currentData().toInt();
     if (rsaBits == 0) {
         QMessageBox::critical(this, "Error", "Please select a valid RSA key size.");
@@ -2411,7 +2280,6 @@ void MainWindow::onCreateNewKeypair()
             );
         if (reply != QMessageBox::Ok)
             return;
-        // User confirmed, force overwrite
         if (crypt.generateKeyPair(rsaBits, true)) {
             QMessageBox::information(this, "Key Pair", "New key pair generated successfully.");
         } else {
@@ -2420,7 +2288,6 @@ void MainWindow::onCreateNewKeypair()
         return;
     }
 
-    // No keys exist, just generate
     if (crypt.generateKeyPair(rsaBits)) {
         QMessageBox::information(this, "Key Pair", "New key pair generated successfully.");
     } else {
@@ -2430,38 +2297,30 @@ void MainWindow::onCreateNewKeypair()
 
 QString MainWindow::encryptMessageForPeer(const QString& peerOnion, const QString& plainText)
 {
-    // Get the peer's public key
     QString peerPublicKey = contactManager->getContact(peerOnion).publicKey;
 
-    // Debug: Show which peer and key we're using
 
     QByteArray encrypted;
 
-    // Crypto::encrypt returns bool, fills encrypted QByteArray
     bool ok = crypt.encrypt(plainText.toUtf8(), peerPublicKey, encrypted);
 
     if (!ok) {
         return QString();
     }
 
-    // Debug: Show encrypted (base64) output
 
-    // Return base64-encoded ciphertext for easy transport
     return QString::fromUtf8(encrypted.toBase64());
 }
 
 
 
 
-// Decrypt a message received from a peer (using our private key)
 QString MainWindow::decryptMessageFromPeer(const QString& peerOnion, const QString& encryptedBase64)
 {
     QByteArray encrypted = QByteArray::fromBase64(encryptedBase64.toUtf8());
     QByteArray decrypted;
-    // Crypto::decrypt returns bool, fills decrypted QByteArray
     bool ok = crypt.decrypt(encrypted, decrypted);
     if (!ok) {
-        // Handle decryption failure (could log or show error)
         return QString();
     }
 
@@ -2471,11 +2330,9 @@ QString MainWindow::decryptMessageFromPeer(const QString& peerOnion, const QStri
 
 
 void MainWindow::onEncryptToggled(bool checked) {
-    // Lock UI and revert immediate change
     encryptCheckBox->blockSignals(true);
     encryptCheckBox->setChecked(!checked);
 
-    // 1. Validate peer selection
     const QString peerOnion = contactAddressLabel->text().trimmed();
 
     if (peerOnion.isEmpty() || peerOnion == myOnion) {
@@ -2484,14 +2341,12 @@ void MainWindow::onEncryptToggled(bool checked) {
         return;
     }
 
-    // 2. Validate local crypto
     if (!crypt.keysExist()) {
         QMessageBox::warning(this, "No Keys", "Generate your encryption keys first");
         encryptCheckBox->blockSignals(false);
         return;
     }
 
-    // 3. Validate peer's public key exists
     const QString peerPubKey = contactManager->getContact(peerOnion).publicKey;
     if (peerPubKey.isEmpty()) {
         QMessageBox::warning(this, "No Public Key",
@@ -2500,7 +2355,6 @@ void MainWindow::onEncryptToggled(bool checked) {
         return;
     }
 
-    // 4. Validate key format
     const QString trimmedKey = peerPubKey.trimmed();
     if (!trimmedKey.startsWith("-----BEGIN PUBLIC KEY-----") ||
         !trimmedKey.endsWith("-----END PUBLIC KEY-----")) {
@@ -2510,11 +2364,9 @@ void MainWindow::onEncryptToggled(bool checked) {
         return;
     }
 
-    // ALL CHECKS PASSED - apply changes
     encryptCheckBox->setChecked(checked);
     encryptCheckBox->blockSignals(false);
 
-    // Save to contact
     Contact contact = contactManager->getContact(peerOnion);
     contact.encryptionEnabled = checked;
     contactManager->updateContact(contact);
@@ -2524,7 +2376,6 @@ void MainWindow::onEncryptToggled(bool checked) {
 
 void MainWindow::exportMyInfo()
 {
-    // Create dialog
     QDialog* dialog = new QDialog(this);
     dialog->setWindowTitle(tr("Export My Contact Info"));
 
@@ -2542,7 +2393,6 @@ void MainWindow::exportMyInfo()
     QLineEdit* commentsInput = new QLineEdit(dialog);
     commentsInput->setPlaceholderText(tr("Optional: Add comments or notes"));
 
-    // Pre-fill onion address and public key if available
     QString myOnion;
     QFile onionFile(getTorChatHiddenDirPath() + "/hostname");
     if (onionFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -2562,11 +2412,7 @@ void MainWindow::exportMyInfo()
             QMessageBox::Yes | QMessageBox::No
             );
         if (reply == QMessageBox::Yes) {
-            //publicKeyInput->setPlaceholderText(tr("**No public key present**\n"
-              //                                    "**You can generate a keypair at a later time**\n"));
-            // Proceed with export logic, but mark that no key is present
         } else {
-            // User chose not to proceed; abort export
             return;
         }
 
@@ -2594,7 +2440,6 @@ void MainWindow::exportMyInfo()
             return;
         }
 
-        // Prepare JSON object
         QJsonObject obj;
         obj["name"] = name;
         obj["onion"] = onion;
@@ -2603,7 +2448,6 @@ void MainWindow::exportMyInfo()
         if (!comments.isEmpty())
             obj["comments"] = comments;
 
-        // Prepare file path
         QString baseName = name;
         baseName.remove(' '); // Remove spaces
         QString filePath = QDir(getContactsDirPath()).filePath(baseName + ".contact");
@@ -2627,9 +2471,7 @@ void MainWindow::exportMyInfo()
 
 void MainWindow::checkAndUpdateContacts()
 {
-    // Check active connections
     if (!networkManager->getConnectedPeers().isEmpty()) {
-        // 2. Show warning
         QMessageBox::StandardButton reply = QMessageBox::question(
             this,
             tr("Active Connections"),
@@ -2637,16 +2479,13 @@ void MainWindow::checkAndUpdateContacts()
             QMessageBox::Yes | QMessageBox::No
             );
 
-        // 3. Only update if user confirms
         if (reply == QMessageBox::No) return;
     }
 
-    // proceed with update (if no connections or user confirmed)
     updateContactsList();
 
 }
 
-// new tor ports
 void MainWindow::editTorrcPortsDialog()
 {
     QString torrcPath = getTorrcDirPath();
@@ -2656,7 +2495,6 @@ void MainWindow::editTorrcPortsDialog()
         return;
     }
 
-    // Read current ports
     int port1 = 8080, port2 = 9090, controlPort = 9051, proxyPort = 9050;
 
     QRegularExpression hsPortRe(R"(^HiddenServicePort\s+\d+\s+127\.0\.0\.1:(\d+))");
@@ -2693,7 +2531,6 @@ void MainWindow::editTorrcPortsDialog()
     QString defaultControlPort = "9051";
     QString defaultProxyPort = "9050";
 
-    // Current values (read-only)
     QLineEdit *currentChatPort = new QLineEdit(QString::number(port1));
     QLineEdit *currentHttpPort = new QLineEdit(QString::number(port2));
     QLineEdit *currentControlPort = new QLineEdit(QString::number(controlPort));
@@ -2704,7 +2541,6 @@ void MainWindow::editTorrcPortsDialog()
     currentControlPort->setReadOnly(true);
     currentProxyPort->setReadOnly(true);
 
-    // Editable fields for new values
     QLineEdit *editChatPort = new QLineEdit(QString::number(port1));
     QLineEdit *editHttpPort = new QLineEdit(QString::number(port2));
     QLineEdit *editControlPort = new QLineEdit(QString::number(controlPort));
@@ -2718,7 +2554,6 @@ void MainWindow::editTorrcPortsDialog()
     layout->addRow("New ControlPort:", editControlPort);
     layout->addRow("Current ProxyPort:", currentProxyPort);
     layout->addRow("New ProxyPort:", editproxyPort);
-    // Restore Defaults button
     QPushButton *restoreDefaultsBtn = new QPushButton("Restore Defaults", &dialog);
     layout->addWidget(restoreDefaultsBtn);
     QObject::connect(restoreDefaultsBtn, &QPushButton::clicked, [&]() {
@@ -2729,7 +2564,6 @@ void MainWindow::editTorrcPortsDialog()
 
     });
 
-    // OK/Cancel buttons
     QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel, &dialog);
     layout->addWidget(buttonBox);
 
@@ -2740,7 +2574,6 @@ void MainWindow::editTorrcPortsDialog()
         return;
 
 
-    // Validate and update
     bool ok1, ok2, ok3, ok4;
     int newChatPort = editChatPort->text().toInt(&ok1);
     int newHttpPort = editHttpPort->text().toInt(&ok2);
@@ -2765,7 +2598,6 @@ if (newChatPort == newHttpPort ||
 }
 */
 
-    // Read all lines
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QMessageBox::warning(this, "Error", "Cannot re-open torrc file.");
         return;
@@ -2795,7 +2627,6 @@ if (newChatPort == newHttpPort ||
     }
     file.close();
 
-    // Write back
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
         QMessageBox::warning(this, "Error", "Cannot write to torrc file.");
         return;
@@ -2844,7 +2675,6 @@ void MainWindow::loadPortsFromTorrc() {
     file.close();
 }
 
-//drag and drop
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event)
 {
@@ -2860,7 +2690,6 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event)
     event->ignore();
 }
 
-// Override dropEvent to handle dropped .contact files
 void MainWindow::dropEvent(QDropEvent *event)
 {
     if (event->mimeData()->hasUrls()) {
@@ -2869,7 +2698,6 @@ void MainWindow::dropEvent(QDropEvent *event)
             if (url.isLocalFile() && url.toLocalFile().endsWith(".contact", Qt::CaseInsensitive)) {
                 QString filePath = url.toLocalFile();
 
-                // Read and parse the .contact file
                 QFile file(filePath);
                 if (!file.open(QIODevice::ReadOnly)) {
                     QMessageBox::warning(this, tr("Import Failed"), tr("Could not open contact file: %1").arg(filePath));
@@ -2889,13 +2717,11 @@ void MainWindow::dropEvent(QDropEvent *event)
 
                 QJsonObject obj = doc.object();
 
-                // Validate required fields
                 if (!obj.contains("onion") || !obj.contains("name")) {
                     QMessageBox::warning(this, tr("Import Failed"), tr("Contact file missing required fields: %1").arg(filePath));
                     continue;
                 }
 
-                // Call addContact with both onion and the QJsonObject to prefill all fields
                 addContact(obj.value("onion").toString(), obj);
             }
         }
@@ -2905,7 +2731,6 @@ void MainWindow::dropEvent(QDropEvent *event)
     }
 }
 
-//event filter
 
 bool MainWindow::eventFilter(QObject* obj, QEvent* event)
 {
@@ -2916,13 +2741,11 @@ bool MainWindow::eventFilter(QObject* obj, QEvent* event)
 
         if (QApplication::keyboardModifiers() & Qt::ControlModifier) {
 
-            // Adjust font size
             if (wheelEvent->angleDelta().y() > 0)
                 m_bubbleFontSize = std::min(m_bubbleFontSize + 1, 32);
             else if (wheelEvent->angleDelta().y() < 0)
                 m_bubbleFontSize = std::max(m_bubbleFontSize - 1, 8);
 
-            // Find the scroll area this event is for (optional: you can use the current tab)
             QWidget* currentTab = chatTabWidget->currentWidget();
             if (!currentTab) return true;
             QScrollArea* scrollArea = currentTab->findChild<QScrollArea*>();
@@ -2944,16 +2767,12 @@ bool MainWindow::eventFilter(QObject* obj, QEvent* event)
     return QObject::eventFilter(obj, event);
 }
 
-// add a splitter between chat area and dock
 
 void MainWindow::setupMainLayoutWithSplitter() {
-    // Create splitter
     QSplitter* splitter = new QSplitter(this);
     splitter->setOrientation(Qt::Horizontal);
-    // Make splitter wider and yellow-beige
     splitter->setHandleWidth(4);  // Increased from default (usually 4-5)
 
-    // Style the splitter with discreet yellow-beige
     splitter->setStyleSheet(
         "QSplitter::handle {"
         "   background-color: #e8d5b5;"  // Discreet yellow-beige
@@ -2966,40 +2785,41 @@ void MainWindow::setupMainLayoutWithSplitter() {
         "   background-color: #c4a076;"   // Even darker when pressed
         "}"
     );
-    // Setup dock widgets (contactsDock)
     setupDockWidgets(); // This creates contactsDock and dockContent
 
-    // Setup chat area
     setupChatArea(); // This creates centralWidget and its layout
 
-    // Add dock and chat area to splitter
     splitter->addWidget(contactsDock);      // Left side: contacts
     splitter->addWidget(centralWidget);     // Right side: chat area
 
-    // Optionally set initial sizes
     splitter->setStretchFactor(0, 0); // contactsDock
     splitter->setStretchFactor(1, 1); // chat area
     splitter->setSizes({300, 800});   // Initial sizes at startup
 
 
-    // Set splitter as the central widget
     setCentralWidget(splitter);
 }
 
 
 void MainWindow::checkFirstRun() {
 
-    //QSettings settings;
-
     bool firstRun = settings.value("firstRun", true).toBool();
 
     if (firstRun) {
-
         settings.setValue("firstRun", false);
 
-        QMessageBox::information(this, "Setup Complete",
-                                 "To finalize setup, please restart the application after the UI is fully loaded");
-    } else {
+        QMessageBox::information(
+            this,
+            "Setup Complete",
+            "To finalize setup, please restart the application "
+            "after the UI is fully loaded.\n\n"
+            "⚠ IMPORTANT: It is essential that you stop all other Tor "
+            "applications before running Selene, or the app will not "
+            "run properly.\n\n"
+            "You can later edit the torrc ports from the app's Settings "
+            "so that you can have more than one instance of Tor running. "
+            "But for the time being, it is best to ensure no other Tor "
+            "service is running.");
     }
 }
 
@@ -3021,7 +2841,6 @@ void MainWindow::performFactoryReset() {
     QDir dir(appDataDir);
     bool deleted = dir.exists() ? dir.removeRecursively() : false;
 
-    // Delete config dir (can contain settings)
     QDir dirConfig(configDir);
     bool deletedConfig = dirConfig.exists() ? dirConfig.removeRecursively() : true;
 
@@ -3081,12 +2900,10 @@ void MainWindow::addFontSizeCombo(){
     fontSizeCombo->setToolTip("Set chat font size\n"
                               "You can also use CTRL + '=/-'");
 
-    // Populate font sizes from 8 to 16
     for (int i = 8; i <= 18; ++i) {
         fontSizeCombo->addItem(QString::number(i), i);
     }
 
-    // Load font size from settings or use default 11
     int savedFontSize = settings.value("chatFontSize", 11).toInt();
     int fontSizeIndex = fontSizeCombo->findData(savedFontSize);
     if (fontSizeIndex != -1) {
@@ -3096,17 +2913,14 @@ void MainWindow::addFontSizeCombo(){
     }
     m_bubbleFontSize = fontSizeCombo->currentData().toInt();
 
-    // Connect combo box to update font size and save to settings
     connect(fontSizeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, [this](int idx) {
                 int selectedFontSize = this->fontSizeCombo->itemData(idx).toInt();
                 this->m_bubbleFontSize = selectedFontSize;
                 this->messageInput->setFontPointSize(selectedFontSize);
-                // Save to settings
                 QSettings settings;
                 settings.setValue("chatFontSize", selectedFontSize);
 
-                // Update all message bubbles
                 this->updateBubbleFontSizes();
             });
 
@@ -3120,17 +2934,14 @@ QString MainWindow::encryptFileForPeer(const QString &filePath, const QString &p
     QFileInfo fi(filePath);
     QString fileName = fi.fileName();
 
-    // 1. Get peer public key
     QString peerPublicKey = contactManager->getContact(peerOnion).publicKey;
     if (peerPublicKey.isEmpty()) {
         qWarning() << "No public key for peer" << peerOnion;
         return QString();
     }
 
-    // 2. Generate a random AES key (256-bit)
     QByteArray aesKey = crypt.generateAESKey(32);
 
-    // 3. Encrypt the file with AES
     QByteArray fileData;
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) return QString();
@@ -3144,14 +2955,12 @@ QString MainWindow::encryptFileForPeer(const QString &filePath, const QString &p
         return QString();
     }
 
-    // 4. Encrypt AES key with peer's public RSA key
     QByteArray encryptedAESKey;
     if (!crypt.encrypt(aesKey, peerPublicKey, encryptedAESKey)) {
         qWarning() << "Failed to encrypt AES key";
         return QString();
     }
 
-    // 5. Create a temporary encrypted bundle file
     QString tempPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation)
                        + QDir::separator() + fileName + ".encbundle";
 
@@ -3164,15 +2973,12 @@ QString MainWindow::encryptFileForPeer(const QString &filePath, const QString &p
     QDataStream out(&bundleFile);
     out.setVersion(QDataStream::Qt_6_0);
 
-    // Save encrypted AES key section
     out << quint32(encryptedAESKey.size());
     out.writeRawData(encryptedAESKey.constData(), encryptedAESKey.size());
 
-    // Save IV section (essential for AES decryption)
     out << quint32(iv.size());
     out.writeRawData(iv.constData(), iv.size());
 
-    // Save encrypted file data section
     out << quint32(encryptedFileData.size());
     out.writeRawData(encryptedFileData.constData(), encryptedFileData.size());
 
@@ -3181,12 +2987,10 @@ QString MainWindow::encryptFileForPeer(const QString &filePath, const QString &p
         return QString();
     }
 
-    qDebug() << "File encrypted successfully. Bundle:" << tempPath;
     return tempPath;
 }
 
 
-//////////
 
 void MainWindow::createSymlink()
 {
@@ -3220,7 +3024,6 @@ void MainWindow::createSymlink()
     }
 
 #endif
-    // Open dialog to select destination folder
     QString destinationDir = QFileDialog::getExistingDirectory(
                 this,
                 "Select Destination Folder for Symlink",
@@ -3232,9 +3035,7 @@ void MainWindow::createSymlink()
         return; // User cancelled
     }
 
-    // Create symlink path
     QString symlinkPath = QDir(destinationDir).filePath(QApplication::applicationName());
-    // Check if symlink already exists
     if (QFile::exists(symlinkPath) || QFileInfo(symlinkPath).isSymLink()) {
         QMessageBox::StandardButton reply = QMessageBox::question(
                     this,
@@ -3247,14 +3048,12 @@ void MainWindow::createSymlink()
             return;
         }
 
-        // Remove existing file/symlink
         if (!QFile::remove(symlinkPath)) {
             QMessageBox::warning(this, "Error", "Could not remove existing file/symlink");
             return;
         }
     }
 
-    // Create the symlink
     QString targetPath = getDocumentsDirPath();
 
     if (!QFile::exists(targetPath)) {
@@ -3293,13 +3092,112 @@ void MainWindow::createSymlink()
 }
 
 void MainWindow::openFolder() {
-    // Optional: Check if the folder exists
     QDir dir(getDocumentsDirPath());
     if (!dir.exists()) {
         return;
     }
 
-    // Convert local path to URL and open
     if (!QDesktopServices::openUrl(QUrl::fromLocalFile(getDocumentsDirPath()))) {
+    }
+}
+
+void MainWindow::setupCornerWidget()
+{
+
+
+    QPushButton *infoButton = new QPushButton("ⓘ", this);
+    infoButton->setFixedSize(24, 24);
+    infoButton->setToolTip(
+        "<html><body style='white-space: nowrap;'>"
+        "<b>Selene — Quick Guide</b><br><br>"
+
+        "<b>Getting Started</b><br>"
+        "• Restart after first launch to finalize setup<br>"
+        "• Tor starts automatically, generating your .onion addresses<br>"
+        "• Left panel: contacts · Right panel: chat<br><br>"
+
+        "<b>Contacts</b><br>"
+        "• '+ Add Contact' or drag &amp; drop a .contact file<br>"
+        "• Onion address and name are required<br>"
+        "• Search: [text] name · #b blocked · #c comments · #g group · #o onion<br>"
+        "• Right-click a contact to Edit, Block, or Delete<br><br>"
+
+        "<b>Connecting &amp; Chatting</b><br>"
+        "• Enter peer's onion address → Connect<br>"
+        "* Or select a contact from the lsit<br>"
+        "• 'Open Chat' opens a tab without connecting<br>"
+        "• Send: button or Ctrl+Enter<br>"
+        "• Encrypt checkbox → RSA-encrypted(up to RSA 8192 bit) message<br><br>"
+
+        "• Emoji: 😊 button · Font size: Ctrl+= / Ctrl+-<br><br>"
+
+        "<b>Sending Files</b><br>"
+        "• Connect first, then 'Send File'<br>"
+        "• Files served via your HTTP onion; URL sent to peer<br>"
+        "• Encrypt checkbox → AES encrypted bundle<br><br>"
+
+        "<b>Encryption (RSA)</b><br>"
+        "• Toolbar → Create New Key Pair (2048/4096/8192)<br>"
+        "• Check 'Encrypt' to secure messages to a peer<br>"
+        "• Peer needs a valid PEM public key in their contact<br>"
+        "• Share yours via Copy Public Key or Export My Info<br><br>"
+
+        "<b>Tor Menu</b><br>"
+        "• New Tor Circuit<br>"
+        "• New Chat/HTTP Onion (⚠ resets address, restart required)<br>"
+        "• Edit Torrc Ports (only if ports clash with another Tor app)<br>"
+        "• Bridge Manager for censorship circumvention<br><br>"
+
+        "<b>HTTP Server</b><br>"
+        "• Copy server onion / WWW dir<br>"
+        "• Start · Stop · Restart<br>"
+        "• Open HTTP Client<br><br>"
+
+        "<b>Settings</b><br>"
+        "• Factory Reset (⚠ deletes everything)<br>"
+        "• Mute Sounds (Ctrl+M) · Enable Logger · View Log (Ctrl+L)<br>"
+        "• Set Scale (Ctrl+Shift+S) · Set Font Size (Ctrl+Shift+F)<br><br>"
+
+        "<b>Chat History</b><br>"
+        "• Clear Current Chat / Clear All Chats<br>"
+        "• Auto-saved; optional clear on exit<br><br>"
+
+        "<b>Shortcuts</b><br>"
+        "• Ctrl+Enter send · Ctrl+= / Ctrl+- font<br>"
+        "• Ctrl+M mute · Ctrl+L log · Ctrl+Q quit<br>"
+        "• Ctrl+Shift+S scale · Ctrl+Shift+F font size<br><br>"
+
+        "<b>Help Menu</b><br>"
+        "• About · Features · Changelog · Instructions · Support Us"
+
+        "</body></html>"
+    );
+    infoButton->setStyleSheet(
+        "QPushButton#infoButton { "
+        "background-color: rgba(37, 99, 235, 0.15); "
+        "border-radius: 16px; "
+        "font-size: 18px; "
+        "font-weight: bold; "
+        "color: #60a5fa; "
+        "border: none; "
+        "padding: 0px; "
+        "} "
+        "QPushButton#infoButton:hover { "
+        "background-color: rgba(37, 99, 235, 0.3); "
+        "color: #93bbfc; "
+        "}"
+    );
+
+    infoButton->setObjectName("infoButton");
+
+
+    QWidget *cornerContainer = new QWidget(this);
+    QHBoxLayout *cornerLayout = new QHBoxLayout(cornerContainer);
+    cornerLayout->setContentsMargins(0, 0, 6, 0);
+    cornerLayout->setSpacing(6);
+    cornerLayout->addWidget(infoButton);
+
+    if (menubar) {
+        menuBar()->setCornerWidget(cornerContainer, Qt::TopRightCorner);
     }
 }

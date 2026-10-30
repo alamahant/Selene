@@ -120,6 +120,26 @@ QString HelpMenuDialog::getWhatsNewContent() {
 <p style="margin: 5px 0;"><strong>Platform:</strong> Cross-platform</p>
 </div>
 
+
+<div style="margin: 30px 0;">
+<h4 style="color: #2c3e50;">What's New in Version 1.0.8 (October 30, 2026)</h4>
+
+<p style="text-align: left; margin: 10px 20px; font-weight: bold; color: #2c3e50;">Added:</p>
+<p style="text-align: left; margin: 5px 20px;">
+• Website Hosting: Static sites can now be served alongside the file share over the same HTTP onion<br>
+• Site Manager Dialog: Add, remove, enable/disable, rename, and copy site URLs<br>
+• Per-Site URL Prefix: Each site is served under its own /name/ path, backed by a folder under ~/Documents/Selene/websites/<br>
+• Smart File Delivery: Renderable files are served inline, binaries download<br>
+• Canonical URLs: Requests without a trailing slash redirect to the canonical /name/ URL<br>
+</p>
+
+<p style="text-align: left; margin: 10px 20px; font-weight: bold; color: #2c3e50;">Improved:</p>
+<p style="text-align: left; margin: 5px 20px;">
+• Site Persistence: Sites are stored in QSettings and survive restarts<br>
+• File Share Unchanged: The existing file share at / continues to work exactly as before<br>
+</p>
+</div>
+
 <div style="margin: 30px 0;">
 <h4 style="color: #2c3e50;">What's New in Version 1.0.7 (March 11, 2026)</h4>
 

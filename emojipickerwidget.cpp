@@ -15,7 +15,6 @@ EmojiPickerWidget::EmojiPickerWidget(const QStringList& emojiResourcePaths, QWid
     int columns = 8; // Adjust as needed
     int row = 0, col = 0;
 
-    // Use the loaded emoji font
     QFont emojiFont("Noto Color Emoji");
     emojiFont.setPointSize(30); // Adjust size as needed
 

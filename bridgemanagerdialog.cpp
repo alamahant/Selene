@@ -10,7 +10,6 @@ BridgeManagerDialog::BridgeManagerDialog(QWidget *parent)
     setupUI();
     setupConnections();
 
-    // RESTORE SETTINGS AND SET CHECKBOX STATE ← NEW
         if (settings.contains("bridges/enabled")) {
             bool bridgesEnabled = settings.value("bridges/enabled").toBool();
             enableBridgesCheckbox->setChecked(bridgesEnabled);
@@ -27,7 +26,6 @@ void BridgeManagerDialog::setupUI()
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
-    // Instructions
     QLabel *instructions = new QLabel(
         "Paste bridge lines below (one bridge per line).\n"
         "Supported Bridge Types: obfs4 | webtunnel\n"
@@ -39,15 +37,12 @@ void BridgeManagerDialog::setupUI()
     );
     instructions->setWordWrap(true);
 
-    // Bridge text area
     bridgeTextEdit = new QTextEdit();
     bridgeTextEdit->setPlaceholderText("Paste bridge lines here...");
 
-    // Status label
     statusLabel = new QLabel("Ready");
     statusLabel->setStyleSheet("QLabel { color: blue; }");
 
-    // Buttons
     QHBoxLayout *buttonLayout = new QHBoxLayout();
     addButton = new QPushButton("Add Bridges to Torrc");
     clearButton = new QPushButton("Clear Input");
@@ -63,7 +58,6 @@ void BridgeManagerDialog::setupUI()
     buttonLayout->addStretch();
     buttonLayout->addWidget(closeButton);
 
-    // Assemble layout
     mainLayout->addWidget(instructions);
     mainLayout->addWidget(enableBridgesCheckbox);  // ← NEW
     mainLayout->addWidget(bridgeTextEdit);
@@ -97,10 +91,8 @@ void BridgeManagerDialog::addBridges()
     for (QString line : lines) {
         line = line.trimmed();
 
-        // Skip empty lines
         if (line.isEmpty()) continue;
 
-        // If line doesn't start with "Bridge", prepend it
         if (!line.startsWith("Bridge ", Qt::CaseInsensitive)) {
             line = "Bridge " + line;
         }
@@ -113,8 +105,6 @@ void BridgeManagerDialog::addBridges()
         return;
     }
 
-    // Add to torrc
-    //QFile torrcFile(getTorrcPath());
     QFile torrcFile(torrcPath);
 
     if (!torrcFile.open(QIODevice::Append | QIODevice::Text)) {
@@ -127,7 +117,6 @@ void BridgeManagerDialog::addBridges()
     for (const QString &bridge : bridges) {
         stream << bridge << "\n";
     }
-    //stream << "# End of bridges\n";
     torrcFile.close();
 
     statusLabel->setText(QString("Added %1 bridges to torrc. Restart Tor to apply.").arg(bridges.size()));
@@ -137,14 +126,12 @@ void BridgeManagerDialog::addBridges()
 
 void BridgeManagerDialog::clearBridges()
 {
-    // Optional: Add functionality to remove bridges from torrc
     QMessageBox::information(this, "Clear Bridges",
         "To remove bridges, edit torrc file manually or use the reset function.");
 }
 
 void BridgeManagerDialog::loadCurrentBridges()
 {
-    //QFile torrcFile(getTorrcPath());
     QFile torrcFile(torrcPath);
 
     if (!torrcFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -170,7 +157,6 @@ void BridgeManagerDialog::loadCurrentBridges()
 
 QString BridgeManagerDialog::getTorrcPath()
 {
-    // Try common torrc locations
     QStringList possiblePaths = {
         "/etc/tor/torrc",
         "/etc/torrc",
@@ -185,7 +171,6 @@ QString BridgeManagerDialog::getTorrcPath()
         }
     }
 
-    // Default fallback
     return "/etc/tor/torrc";
 }
 
@@ -219,22 +204,15 @@ bool BridgeManagerDialog::removeBridgesFromTorrc()
         return false;
     }
 
-    // Read all lines, filtering out bridge lines
     QStringList newLines;
     QTextStream in(&torrcFile);
 
     while (!in.atEnd()) {
         QString line = in.readLine();
 
-        // Skip lines that contain "Bridge" (case-insensitive)
-        //if (!line.trimmed().startsWith("Bridge ", Qt::CaseInsensitive)) {
-          //  newLines << line;
-       // }
         if (line.trimmed().contains("bridge", Qt::CaseInsensitive)) {
-                    //newLines << line;
                         continue;
                 }
-        // Skip ALL empty lines ← SIMPLE!
         if (line.trimmed().isEmpty()) {
                    continue;
                }
@@ -244,7 +222,6 @@ bool BridgeManagerDialog::removeBridgesFromTorrc()
     }
     torrcFile.close();
 
-    // Write back the filtered content
     if (!torrcFile.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
         return false;
     }
@@ -266,7 +243,6 @@ void BridgeManagerDialog::toggleBridges(bool enabled)
         return;
     }
 
-    // Read all lines
     QStringList lines;
     QTextStream in(&torrcFile);
     while (!in.atEnd()) {
@@ -274,7 +250,6 @@ void BridgeManagerDialog::toggleBridges(bool enabled)
     }
     torrcFile.close();
 
-    // Process lines: comment/uncomment bridge lines
     QStringList newLines;
     for (QString line : lines) {
         QString trimmed = line.trimmed();
@@ -283,12 +258,10 @@ void BridgeManagerDialog::toggleBridges(bool enabled)
             trimmed.startsWith("# Bridge ", Qt::CaseInsensitive)) {
 
             if (enabled) {
-                // Enable: remove "# " from beginning if present
                 if (trimmed.startsWith("# Bridge ", Qt::CaseInsensitive)) {
                     line = line.mid(2); // Remove "# " (2 characters)
                 }
             } else {
-                // Disable: add "# " to beginning if not already commented
                 if (trimmed.startsWith("Bridge ", Qt::CaseInsensitive)) {
                     line = "# " + line;
                 }
@@ -297,7 +270,6 @@ void BridgeManagerDialog::toggleBridges(bool enabled)
         newLines << line;
     }
 
-    // Write back to file
     if (!torrcFile.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
         QMessageBox::critical(this, "Error", "Cannot write to torrc file.");
         return;
@@ -308,14 +280,10 @@ void BridgeManagerDialog::toggleBridges(bool enabled)
         out << line << "\n";
     }
     torrcFile.close();
-    // SAVE STATE TO QSETTINGS ← NEW
     settings.setValue("bridges/enabled", enabled);
     statusLabel->setText(enabled ? "Bridges enabled"
                                 : "Bridges disabled");
 
-    // Reload to show current state
     loadCurrentBridges();
 
-    //QMessageBox::information(this, "Success",
-      //  QString("Bridges have been %1.\n\nRestart Tor for changes to take effect.").arg(enabled ? "enabled" : "disabled"));
 }

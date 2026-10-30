@@ -42,6 +42,8 @@
 #include"securitymanager.h"
 #include"httpclientdialog.h"
 #include"bridgemanagerdialog.h"
+#include"sitemanagerdialog.h"
+#include"sitemanager.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -57,7 +59,6 @@ public:
     ~MainWindow();
 
 protected:
-    //drag and drop
     bool eventFilter(QObject* obj, QEvent* event) override;
 
 
@@ -89,7 +90,6 @@ public slots:
 private:
     Ui::MainWindow *ui;
 
-    // UI components
     QWidget* centralWidget = nullptr;
     QTextBrowser* chatDisplay;
     QTextEdit* messageInput;
@@ -99,23 +99,19 @@ private:
     QPushButton* connectButton = nullptr;
     QLineEdit* peerAddressInput = nullptr;
 
-    // Dock widgets
     QDockWidget* contactsDock;
     ContactListWidget* contactListWidget;
     QLineEdit* searchContactsEdit;
 
-    // Network components
     TorConfig torConfig;
     NetworkManager* networkManager;
     ChatManager* chatManager;
 
-    // State variables
     QString onionAddress;
     QString connectedPeerAddress;
     bool isConnected = false;
     bool isTorMode = true;  // Default to Tor mode
 
-    // Setup methods
     void setupDockWidgets();
     void setupChatArea();
     void setupChatManager();
@@ -132,13 +128,10 @@ private:
 
 private:
     QTabWidget* chatTabWidget;
-    //QMap<QString, QTextBrowser*> chatDisplays;
     QMap<QString, QScrollArea*> chatDisplays;
 
-    // Add these methods:
     void createChatTab(const QString& onionAddress);
     void switchToTab(const QString& onionAddress);
-    //QLabel* contactStatusDot;
 
 private slots:
     void handleEditContact(const QString& onion);
@@ -146,17 +139,14 @@ private slots:
     void handleDeleteContact(const QString& onion);
     void handleAppExit();
     void openChatTabForPeer(const QString& onionAddress);
-    // send file
     void sendFile();
 private:
 
-    //void updateContactDisplay(const QString& onion);
     void addContact(const QString &sendersOnion = QString(), const QJsonObject &contact = QJsonObject());
     QSet<QString> m_addContactDialogsOpen;
     QString lastAddedContactFriendlyName = QString();
     QMap<QString, QWidget*> chatTabWidgets; // onionAddress -> tabWidget
     QPushButton* openChatButton ;
-    //emojies
     QStringList getAllEmojiResources();
     QStringList emojiPaths;
     EmojiPickerWidget* emojiPicker = nullptr;
@@ -164,20 +154,14 @@ private:
     QWidget* inputWidget = nullptr;
     QDialog *pickerDialog = nullptr;
     void setupEmojiPickerDialog();
-    // Http server
     SimpleHttpFileServer * httpServer = nullptr;
-    //progress dialog while connecting
-    //QProgressDialog* progressDialog = nullptr;
-    // Clean temp WWW directories
     void cleanTmpWWWDirs();
-    // sound system
 private:
     bool play = true;
     void playSound(SoundType type, bool playIt);
     QMap<SoundType, QSoundEffect*> m_soundEffects;
     QScrollArea* scrollArea = nullptr;
 private slots:
-    // clear history
     void clearAllHistory();
     void clearCurrentTabHistory();
 private:
@@ -216,7 +200,6 @@ private:
     QComboBox* rsaBitsCombo;
     QComboBox* statusCombo;
 
-    //crypto
     Crypto crypt;
     QString encryptMessageForPeer(const QString& peerOnion, const QString& plainText);
     QString decryptMessageFromPeer(const QString& peerOnion, const QString& encryptedBase64);
@@ -230,13 +213,9 @@ private:
     QVBoxLayout* dockLayout = nullptr;
     void checkAndUpdateContacts();
     QString myOnion;
-    // new tor ports
     void loadPortsFromTorrc();
-//font size for msgbubble
     int m_bubbleFontSize = 11; // Default font size
-//change contactselected whenchanging tab
     bool updatingSelection = false;
-// add a splitter
     void setupMainLayoutWithSplitter();
 
 
@@ -259,6 +238,10 @@ private:
     QString encryptFileForPeer(const QString &filePath, const QString &peerOnion);
     BridgeManagerDialog *bridgeDialog = nullptr;
     QLabel* contactGroupLabel;
+    void setupCornerWidget();
+    SiteManagerDialog* m_siteDialog = nullptr;
+    SiteManager* m_siteManager = nullptr;
+    QAction* openSiteManagerAction;
 };
 
 #endif // MAINWINDOW_H

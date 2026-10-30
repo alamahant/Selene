@@ -1,9 +1,13 @@
 #include "httpclientdialog.h"
 #include<QRegularExpression>
 #include "crypto.h"
+#include<QApplication>
+#include"constants.h"
+#include<QDesktopServices>
 
-HttpClientDialog::HttpClientDialog(QWidget *parent)
+HttpClientDialog::HttpClientDialog(SiteManager *siteManager, QWidget *parent)
     : QDialog(parent)
+    , m_siteManager(siteManager)
 {
     setupUI();
     setupConnections();
@@ -11,7 +15,6 @@ HttpClientDialog::HttpClientDialog(QWidget *parent)
 
 HttpClientDialog::~HttpClientDialog()
 {
-    // Cancel all active downloads on close
     for (auto process : activeDownloads) {
         process->kill();
         process->deleteLater();
@@ -25,7 +28,6 @@ void HttpClientDialog::setupUI()
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
-    // URL Bar
     QHBoxLayout *urlLayout = new QHBoxLayout();
     urlBar = new QLineEdit();
     urlBar->setPlaceholderText("Enter .onion URL or http://localhost:port");
@@ -33,23 +35,24 @@ void HttpClientDialog::setupUI()
     urlLayout->addWidget(urlBar);
     urlLayout->addWidget(goButton);
 
-    // File List
     fileList = new QListWidget();
     fileList->setSelectionMode(QAbstractItemView::ExtendedSelection);
     QHBoxLayout *buttonLayout = new QHBoxLayout();
-        resetButton = new QPushButton("Reset");
-        downloadSelectedButton = new QPushButton("Download Selected");
-        closeButton = new QPushButton("Close");
-        buttonLayout->addWidget(resetButton);
-        buttonLayout->addStretch(); // Push buttons to the right
-        buttonLayout->addWidget(downloadSelectedButton);
-        buttonLayout->addStretch(); // Push buttons to the right
+    resetButton = new QPushButton("Reset");
+    downloadSelectedButton = new QPushButton("Download Selected");
+    openDownloadButton = new QPushButton("Downloads", this);
+    closeButton = new QPushButton("Close");
+    buttonLayout->addWidget(resetButton);
+    buttonLayout->addStretch(); // Push buttons to the right
+    buttonLayout->addWidget(downloadSelectedButton);
+    buttonLayout->addWidget(openDownloadButton);
+    buttonLayout->addStretch(); // Push buttons to the right
 
-        buttonLayout->addWidget(closeButton);
+    buttonLayout->addWidget(closeButton);
 
-        mainLayout->addLayout(urlLayout);
-        mainLayout->addWidget(fileList);
-        mainLayout->addLayout(buttonLayout); // Use the button layout
+    mainLayout->addLayout(urlLayout);
+    mainLayout->addWidget(fileList);
+    mainLayout->addLayout(buttonLayout); // Use the button layout
 }
 
 void HttpClientDialog::setupConnections()
@@ -59,6 +62,10 @@ void HttpClientDialog::setupConnections()
     connect(closeButton, &QPushButton::clicked, this, &HttpClientDialog::close);
     connect(resetButton, &QPushButton::clicked, this, &HttpClientDialog::resetAll);
     connect(downloadSelectedButton, &QPushButton::clicked, this, &HttpClientDialog::downloadSelectedFiles);
+    connect(openDownloadButton, &QPushButton::clicked, this, [this]{
+        QString path = getDownloadsDirPath();
+        QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+    });
 }
 
 void HttpClientDialog::fetchDirectoryListing()
@@ -69,16 +76,34 @@ void HttpClientDialog::fetchDirectoryListing()
         return;
     }
 
-    // Clear previous results
     fileList->clear();
     activeDownloads.clear();
     progressBars.clear();
     actionButtons.clear();
 
-    // Fetch directory listing via curl
+    QUrl u(url);
+
+    QString p = url;
+    int slash = p.indexOf('/');
+    if (slash >= 0)
+        p = p.mid(slash);
+    else
+        p = "/";
+
+    if (m_siteManager) {
+
+        Site s;
+        if (m_siteManager->match(p, s) && s.enabled) {
+            QMessageBox::information(this, "Website",
+                "This URL is a website served by Selene. "
+                "Open it in Tor Browser to view it. The HTTP Client "
+                "only browses file shares.");
+            return;
+        }
+    }
+
     QProcess *curlProcess = new QProcess(this);
     QStringList args = {
-        //"--socks5-hostname", "127.0.0.1:9050",
         "--socks5-hostname", bindIP,
 
         "--silent",
@@ -96,30 +121,48 @@ void HttpClientDialog::fetchDirectoryListing()
         curlProcess->deleteLater();
     });
 
-    curlProcess->start("curl", args);
+#ifdef Q_OS_WIN
+    const QString curlExe = QApplication::applicationDirPath() + "/curl/curl.exe";
+    const QString caBundle = QApplication::applicationDirPath() + "/curl/curl-ca-bundle.crt";
+
+    if (!QFile::exists(curlExe)) {
+        QMessageBox::critical(this, "Error",
+            QString("curl not found at:\n%1").arg(curlExe));
+        curlProcess->deleteLater();
+        return;
+    }
+
+    if (QFile::exists(caBundle)) {
+        args << "--cacert" << caBundle;
+
+        QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+        env.insert("CURL_CA_BUNDLE", caBundle);
+        curlProcess->setProcessEnvironment(env);
+    }
+#else
+    const QString curlExe = "curl";
+#endif
+
+    curlProcess->start(curlExe, args);
 }
 
 void HttpClientDialog::addFileToList(const QString& fileName, const QString& fileUrl)
 {
     QListWidgetItem *item = new QListWidgetItem();
 
-    // Create widget for file entry
     QWidget *widget = new QWidget();
     QHBoxLayout *layout = new QHBoxLayout(widget);
     layout->setContentsMargins(5, 2, 5, 2);
 
-    // File name
     QLabel *nameLabel = new QLabel(fileName);
     nameLabel->setMinimumWidth(200);
 
-    // Progress bar
     QProgressBar *progressBar = new QProgressBar();
     progressBar->setMinimum(0);
     progressBar->setMaximum(100);
     progressBar->setValue(0);
     progressBar->setVisible(false);
 
-    // Download button
     QPushButton *actionButton = new QPushButton("Download");
 
     layout->addWidget(nameLabel);
@@ -130,11 +173,9 @@ void HttpClientDialog::addFileToList(const QString& fileName, const QString& fil
     fileList->addItem(item);
     fileList->setItemWidget(item, widget);
 
-    // Store references for later access
     progressBars[fileName] = progressBar;
     actionButtons[fileName] = actionButton;
 
-    // Connect download button
     connect(actionButton, &QPushButton::clicked, this, [this, fileName, fileUrl]() {
         if (activeDownloads.contains(fileName)) {
             cancelDownload(fileName);
@@ -147,7 +188,6 @@ void HttpClientDialog::addFileToList(const QString& fileName, const QString& fil
 void HttpClientDialog::parseHtmlListing(const QString& html)
 {
 
-    // Regex to capture href links
     QRegularExpression linkRegex("<a href=\"([^\"]+)\">([^<]+)</a>", QRegularExpression::CaseInsensitiveOption);
     QRegularExpressionMatchIterator matches = linkRegex.globalMatch(html);
     int count = 0;
@@ -158,16 +198,13 @@ void HttpClientDialog::parseHtmlListing(const QString& html)
         QString fileName = match.captured(2);
 
 
-        // Skip parent directory or non-files
         if (fileName == "../" || fileUrl.contains("://") || fileUrl.startsWith("?")) {
             continue;
         }
 
-        // Keep leading slash for absolute paths; trim whitespace only
         fileUrl = fileUrl.trimmed();
 
 
-        // Add to list
         addFileToList(fileName, fileUrl);
         count++;
     }
@@ -190,7 +227,6 @@ void HttpClientDialog::startDownload(const QString& fileName, const QString& fil
         return;
     }
 
-    // Extract onion host only (no path)
     QString onionHost;
     if (baseUrl.contains('/')) {
         onionHost = baseUrl.section('/', 0, 0); // e.g., "oyjms3dsazrshc5qkktjrzkhwzuhqcqaon5ahlmcsyr4cz47gfwx6pid.onion"
@@ -198,7 +234,6 @@ void HttpClientDialog::startDownload(const QString& fileName, const QString& fil
         onionHost = baseUrl;
     }
 
-    // Ensure fileUrl starts with single slash
     QString cleanedUrl = fileUrl;
     if (!cleanedUrl.startsWith('/')) {
         cleanedUrl = "/" + cleanedUrl;
@@ -207,7 +242,6 @@ void HttpClientDialog::startDownload(const QString& fileName, const QString& fil
     QString fullUrl = onionHost + cleanedUrl;
 
 
-    // Create downloads directory if it doesn't exist
     QString downloadDirpath = getDownloadsDirPath();
     QDir downloadsDir(downloadDirpath);
     if (!downloadsDir.exists()) {
@@ -216,7 +250,6 @@ void HttpClientDialog::startDownload(const QString& fileName, const QString& fil
 
     QString filePath = downloadsDir.filePath(fileName);
 
-    // Setup curl process
     QProcess *curlProcess = new QProcess(this);
     QStringList args = {
         "--socks5-hostname", bindIP,
@@ -227,7 +260,6 @@ void HttpClientDialog::startDownload(const QString& fileName, const QString& fil
     };
 
 
-    // Update UI
     QProgressBar *progressBar = progressBars[fileName];
     QPushButton *actionButton = actionButtons[fileName];
     progressBar->setVisible(true);
@@ -245,7 +277,12 @@ void HttpClientDialog::startDownload(const QString& fileName, const QString& fil
         downloadFinished(fileName, exitCode, exitStatus);
     });
 
-    curlProcess->start("curl", args);
+#ifdef Q_OS_WIN
+    const QString curlExe = "curl.exe";
+#else
+    const QString curlExe = "curl";
+#endif
+    curlProcess->start(curlExe, args);
 }
 
 void HttpClientDialog::updateProgress(const QString& fileName, const QByteArray& progressData)
@@ -255,7 +292,6 @@ void HttpClientDialog::updateProgress(const QString& fileName, const QByteArray&
     QProgressBar *progressBar = progressBars[fileName];
     QString progressStr = QString::fromUtf8(progressData);
 
-    // Look for patterns like: "2.1%" - capture the number BEFORE the decimal
     QRegularExpression percentRegex(R"((\d+)\.\d%)");
     QRegularExpressionMatch match = percentRegex.match(progressStr);
 
@@ -266,7 +302,6 @@ void HttpClientDialog::updateProgress(const QString& fileName, const QByteArray&
         }
     }
 
-    // Also catch 100% case (no decimal)
     QRegularExpression hundredRegex(R"(\b(100)%\b)");
     QRegularExpressionMatch hundredMatch = hundredRegex.match(progressStr);
     if (hundredMatch.hasMatch()) {
@@ -282,7 +317,6 @@ void HttpClientDialog::cancelDownload(const QString& fileName)
         process->deleteLater();
         activeDownloads.remove(fileName);
 
-        // Reset UI
         QProgressBar *progressBar = progressBars[fileName];
         QPushButton *actionButton = actionButtons[fileName];
 
@@ -308,7 +342,6 @@ void HttpClientDialog::downloadFinished(const QString& fileName, int exitCode, Q
             actionButton->setText("Done");
             actionButton->setEnabled(false);
 
-            // MINIMAL ADDITION: Auto-decrypt .encbundle files
             if (fileName.endsWith(".encbundle")) {
                 QString downloadDir = getDownloadsDirPath();
                 QString encryptedPath = downloadDir + QDir::separator() + fileName;
@@ -323,7 +356,6 @@ void HttpClientDialog::downloadFinished(const QString& fileName, int exitCode, Q
                                        QString("Failed to decrypt file:\n%1").arg(encryptedPath));
                 }
             } else {
-                            // Regular file download success
                             QMessageBox::information(this, "Download Complete",
                                                    QString("'%1' downloaded to:\n%2")
                                                      .arg(fileName)
@@ -341,7 +373,6 @@ void HttpClientDialog::downloadFinished(const QString& fileName, int exitCode, Q
 }
 
 
-//AES
 
 
 bool HttpClientDialog::decryptDownloadedFile(const QString &encryptedBundlePath, const QString &destPath)
@@ -357,49 +388,42 @@ bool HttpClientDialog::decryptDownloadedFile(const QString &encryptedBundlePath,
     QDataStream in(&file);
     in.setVersion(QDataStream::Qt_6_0);
 
-    // 1. Read encrypted AES key
     quint32 aesKeySize;
     in >> aesKeySize;
 
     QByteArray encryptedAESKey(aesKeySize, 0);
     int bytesRead1 = in.readRawData(encryptedAESKey.data(), aesKeySize);
 
-    // 2. Read IV
     quint32 ivSize;
     in >> ivSize;
 
     QByteArray iv(ivSize, 0);
     int bytesRead2 = in.readRawData(iv.data(), ivSize);
 
-    // 3. Read encrypted file data
     quint32 encryptedFileSize;
     in >> encryptedFileSize;
 
     QByteArray encryptedFileData(encryptedFileSize, 0);
     int bytesRead3 = in.readRawData(encryptedFileData.data(), encryptedFileSize);
 
-    // Check if we read everything correctly
     if (bytesRead1 != aesKeySize || bytesRead2 != ivSize || bytesRead3 != encryptedFileSize) {
         qWarning() << "❌ Failed to read all data from bundle";
         return false;
     }
 
 
-    // 4. Decrypt AES key using our private key (RSA decryption)
     QByteArray aesKey;
     if (!crypt.decrypt(encryptedAESKey, aesKey)) {
         qWarning() << "❌ Failed to decrypt AES key with RSA";
         return false;
     }
 
-    // 5. Decrypt file data using AES decryption
     QByteArray decryptedFileData = crypt.decryptAES(encryptedFileData, aesKey, iv);
     if (decryptedFileData.isEmpty()) {
         qWarning() << "❌ Failed to decrypt file data with AES";
         return false;
     }
 
-    // 6. Save decrypted file
     QFile outFile(destPath);
     if (!outFile.open(QIODevice::WriteOnly)) {
         qWarning() << "❌ Failed to open output file";
@@ -408,7 +432,6 @@ bool HttpClientDialog::decryptDownloadedFile(const QString &encryptedBundlePath,
     qint64 bytesWritten = outFile.write(decryptedFileData);
     outFile.close();
 
-    // 7. Clean up the encrypted bundle
     file.remove();
 
     return true;
@@ -417,24 +440,19 @@ bool HttpClientDialog::decryptDownloadedFile(const QString &encryptedBundlePath,
 
 void HttpClientDialog::resetAll()
 {
-    // Cancel all active downloads
     for (auto process : activeDownloads) {
         process->kill();
         process->deleteLater();
     }
 
-    // Clear all containers
     activeDownloads.clear();
     progressBars.clear();
     actionButtons.clear();
 
-    // Clear the file list widget
     fileList->clear();
 
-    // Clear URL bar
     urlBar->clear();
 
-    qDebug() << "All fields, downloads, and processes reset";
 }
 
 void HttpClientDialog::downloadSelectedFiles()
@@ -446,16 +464,12 @@ void HttpClientDialog::downloadSelectedFiles()
         return;
     }
 
-    // Download each selected file
     for (QListWidgetItem* item : selectedItems) {
-        // Get the widget from the list item
         QWidget* widget = fileList->itemWidget(item);
         if (!widget) continue;
 
-        // Find the download button in the widget
         QPushButton* downloadBtn = widget->findChild<QPushButton*>();
         if (downloadBtn && downloadBtn->isEnabled()) {
-            // Simulate clicking the download button
             downloadBtn->click();
         }
     }

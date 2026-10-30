@@ -53,12 +53,10 @@ bool Crypto::generateKeyPair(int rsaBits, bool force)
         if (!force) {
             return true; // Do not overwrite existing keys
         }
-        // Remove existing keys if force is true
         QFile::remove(privateKeyPath);
         QFile::remove(publicKeyPath);
     }
 
-    // Create context for RSA key generation
     EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nullptr);
     if (!pctx) return false;
 
@@ -68,7 +66,6 @@ bool Crypto::generateKeyPair(int rsaBits, bool force)
         return false;
     }
 
-    // Set RSA key size (2048 bits)
     if (EVP_PKEY_CTX_set_rsa_keygen_bits(pctx, rsaBits) <= 0) {
         EVP_PKEY_CTX_free(pctx);
         return false;
@@ -81,7 +78,6 @@ bool Crypto::generateKeyPair(int rsaBits, bool force)
 
     EVP_PKEY_CTX_free(pctx);
 
-    // Save private key
     QFile privFile(privateKeyPath);
     if (!privFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         EVP_PKEY_free(pkey);
@@ -102,7 +98,6 @@ bool Crypto::generateKeyPair(int rsaBits, bool force)
     privFile.close();
     BIO_free(privBio);
 
-    // Save public key
     QFile pubFile(publicKeyPath);
     if (!pubFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         EVP_PKEY_free(pkey);
@@ -125,7 +120,6 @@ bool Crypto::generateKeyPair(int rsaBits, bool force)
     EVP_PKEY_free(pkey);
 
 
-    // Reload keys into memory
     return loadKeys();
 }
 
@@ -170,11 +164,8 @@ bool Crypto::loadPublicKey()
 
 bool Crypto::saveKeys()
 {
-    // Not typically needed, as keys are saved on generation
-    // Provided for completeness
     if (!privateKey || !publicKey) return false;
 
-    // Save private key
     QFile privFile(privateKeyPath);
     if (!privFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) return false;
     BIO *privBio = BIO_new(BIO_s_mem());
@@ -189,7 +180,6 @@ bool Crypto::saveKeys()
     privFile.close();
     BIO_free(privBio);
 
-    // Save public key
     QFile pubFile(publicKeyPath);
     if (!pubFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) return false;
     BIO *pubBio = BIO_new(BIO_s_mem());
@@ -216,7 +206,6 @@ QString Crypto::getPublicKey() const
 
 bool Crypto::encrypt(const QByteArray &plainText, const QString &peerPubKeyPem, QByteArray &cipherText)
 {
-    // Load peer's public key from PEM string
     QByteArray pubKeyBytes = peerPubKeyPem.toUtf8();
     BIO *bio = BIO_new_mem_buf(pubKeyBytes.data(), pubKeyBytes.size());
     EVP_PKEY *peerKey = PEM_read_bio_PUBKEY(bio, nullptr, nullptr, nullptr);
@@ -284,7 +273,6 @@ bool Crypto::decrypt(const QByteArray &cipherText, QByteArray &plainText)
     return true;
 }
 
-//AES
 QByteArray Crypto::generateAESKey(int size)
 {
     QByteArray key(size, '\0');

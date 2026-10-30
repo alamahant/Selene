@@ -7,8 +7,8 @@
 #include <QDebug>
 #include<QUrl>
 
-SimpleHttpFileServer::SimpleHttpFileServer(const QString& directory, int port, QObject* parent)
-    : QObject(parent), m_directory(directory), m_port(port), m_running(false), m_server(nullptr)
+SimpleHttpFileServer::SimpleHttpFileServer(const QString& directory, int port, SiteManager *siteManager, QObject* parent)
+    : QObject(parent), m_directory(directory), m_port(port), m_running(false), m_server(nullptr), m_siteManager(siteManager)
 {
 }
 
@@ -88,7 +88,6 @@ void SimpleHttpFileServer::onReadyRead()
 
     m_buffers[socket].append(socket->readAll());
 
-    // Check if we have a full HTTP request (look for double CRLF)
     if (!m_buffers[socket].contains("\r\n\r\n"))
         return;
 
@@ -96,7 +95,7 @@ void SimpleHttpFileServer::onReadyRead()
     m_buffers.remove(socket);
 }
 
-//handlerequest version that protects against spaces in filenames
+/*
 void SimpleHttpFileServer::handleRequest(QTcpSocket* socket)
 {
     QByteArray request = m_buffers.value(socket);
@@ -111,7 +110,6 @@ void SimpleHttpFileServer::handleRequest(QTcpSocket* socket)
         return;
     }
 
-    // FIX: URL decode the path before using it!
     QString decodedPath = QUrl::fromPercentEncoding(path.toUtf8());
 
     if (decodedPath.contains("..")) {
@@ -119,7 +117,6 @@ void SimpleHttpFileServer::handleRequest(QTcpSocket* socket)
         return;
     }
 
-    // Use the DECODED path to find the file
     QString requestedPath = QDir::cleanPath(m_directory + "/" + decodedPath);
     QString baseDir = QDir(m_directory).absolutePath();
 
@@ -133,7 +130,94 @@ void SimpleHttpFileServer::handleRequest(QTcpSocket* socket)
     if (info.isDir()) {
         sendDirectoryListing(socket, requestedPath);
     } else if (info.isFile()) {
-        sendFile(socket, requestedPath);
+        sendFile(socket, requestedPath, false);
+    } else {
+        sendNotFound(socket);
+    }
+}
+*/
+
+
+void SimpleHttpFileServer::handleRequest(QTcpSocket* socket)
+{
+    QByteArray request = m_buffers.value(socket);
+    QTextStream stream(request);
+    QString line = stream.readLine();
+    QString method, path;
+    QTextStream lineStream(&line);
+    lineStream >> method >> path;
+
+    if (method != "GET") {
+        sendNotFound(socket);
+        return;
+    }
+
+    QString decodedPath = QUrl::fromPercentEncoding(path.toUtf8());
+
+
+
+    if (decodedPath.contains("..")) {
+        sendNotFound(socket);
+        return;
+    }
+
+    Site site;
+    bool hasSite = (m_siteManager != nullptr) && m_siteManager->match(decodedPath, site);
+
+    qDebug() << "req:" << decodedPath
+             << "hasSite:" << hasSite
+             << "site:" << (hasSite ? site.prefix : QString("null"));
+
+    if (hasSite && site.enabled && decodedPath + "/" == site.prefix) {
+        QByteArray resp;
+        resp += "HTTP/1.1 301 Moved Permanently\r\n";
+        resp += "Location: " + site.prefix.toUtf8() + "\r\n";
+        resp += "Content-Length: 0\r\n";
+        resp += "Connection: close\r\n";
+        resp += "\r\n";
+        socket->write(resp);
+        socket->disconnectFromHost();
+        return;
+    }
+
+
+    QString baseDir;
+    QString requestedPath;
+    bool websiteMode = false;
+
+    if (hasSite && site.enabled) {
+        websiteMode = true;
+        QString remainder;
+        if (decodedPath + "/" == site.prefix)
+            remainder = "/";
+        else
+            remainder = decodedPath.mid(site.prefix.length() - 1);
+        baseDir = QDir(site.path).absolutePath();
+        requestedPath = QDir::cleanPath(baseDir + "/" + remainder);
+    } else {
+        baseDir = QDir(m_directory).absolutePath();
+        requestedPath = QDir::cleanPath(baseDir + "/" + decodedPath);
+    }
+
+    if (!requestedPath.startsWith(baseDir)) {
+        sendNotFound(socket);
+        return;
+    }
+
+    QFileInfo info(requestedPath);
+
+    if (info.isDir()) {
+        if (websiteMode) {
+            QFileInfo index(QDir(requestedPath).filePath("index.html"));
+            if (index.exists() && index.isFile())
+                sendFile(socket, index.absoluteFilePath(), true);
+            else
+                sendNotFound(socket);
+        } else {
+            sendDirectoryListing(socket, requestedPath);
+        }
+    } else if (info.isFile()) {
+        sendFile(socket, requestedPath, websiteMode);
     } else {
         sendNotFound(socket);
     }
@@ -160,12 +244,10 @@ void SimpleHttpFileServer::sendDirectoryListing(QTcpSocket* socket, const QStrin
 
     for (const QString& file : files) {
         QString fileUrl = "/" + relativePath + file;  // Correct URL for subdir files
-        // protect against spaces in urls
         QString encodedFileUrl = QUrl::toPercentEncoding(fileUrl, "/");
         html += QString("<li><a href=\"%1\">%2</a></li>")
                    .arg(encodedFileUrl.toHtmlEscaped(), file.toHtmlEscaped());
 
-                   // .arg(fileUrl.toHtmlEscaped(), file.toHtmlEscaped());
     }
 
     html += "</ul></body></html>";
@@ -183,7 +265,7 @@ void SimpleHttpFileServer::sendDirectoryListing(QTcpSocket* socket, const QStrin
 }
 
 
-void SimpleHttpFileServer::sendFile(QTcpSocket* socket, const QString& fullFilePath)
+void SimpleHttpFileServer::sendFile(QTcpSocket* socket, const QString& fullFilePath, bool websiteMode)
 {
     QFile file(fullFilePath);
     if (!file.exists() || !file.open(QIODevice::ReadOnly)) {
@@ -196,11 +278,8 @@ void SimpleHttpFileServer::sendFile(QTcpSocket* socket, const QString& fullFileP
 
     QString fileName = QFileInfo(file).fileName();
 
-    // Basic content type detection
     QString contentType = "application/octet-stream";
 
-    // ===== Supported File Extensions =====
-    // Text & Documents
     if (fileName.endsWith(".txt"))
         contentType = "text/plain";
     else if (fileName.endsWith(".html") || fileName.endsWith(".htm"))
@@ -218,7 +297,6 @@ void SimpleHttpFileServer::sendFile(QTcpSocket* socket, const QString& fullFileP
     else if (fileName.endsWith(".pdf"))
         contentType = "application/pdf";
 
-    // Images
     else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg"))
         contentType = "image/jpeg";
     else if (fileName.endsWith(".png"))
@@ -234,7 +312,6 @@ void SimpleHttpFileServer::sendFile(QTcpSocket* socket, const QString& fullFileP
     else if (fileName.endsWith(".ico"))
         contentType = "image/x-icon";
 
-    // Audio
     else if (fileName.endsWith(".mp3"))
         contentType = "audio/mpeg";
     else if (fileName.endsWith(".wav"))
@@ -246,7 +323,6 @@ void SimpleHttpFileServer::sendFile(QTcpSocket* socket, const QString& fullFileP
     else if (fileName.endsWith(".m4a"))
         contentType = "audio/mp4";
 
-    // Video
     else if (fileName.endsWith(".mp4"))
         contentType = "video/mp4";
     else if (fileName.endsWith(".webm"))
@@ -258,7 +334,6 @@ void SimpleHttpFileServer::sendFile(QTcpSocket* socket, const QString& fullFileP
     else if (fileName.endsWith(".mov"))
         contentType = "video/quicktime";
 
-    // Archives
     else if (fileName.endsWith(".zip"))
         contentType = "application/zip";
     else if (fileName.endsWith(".tar"))
@@ -270,7 +345,6 @@ void SimpleHttpFileServer::sendFile(QTcpSocket* socket, const QString& fullFileP
     else if (fileName.endsWith(".rar"))
         contentType = "application/x-rar-compressed";
 
-    // Office & Documents
     else if (fileName.endsWith(".doc") || fileName.endsWith(".docx"))
         contentType = "application/msword";
     else if (fileName.endsWith(".xls") || fileName.endsWith(".xlsx"))
@@ -282,7 +356,6 @@ void SimpleHttpFileServer::sendFile(QTcpSocket* socket, const QString& fullFileP
     else if (fileName.endsWith(".ods"))
         contentType = "application/vnd.oasis.opendocument.spreadsheet";
 
-    // Executables & Binaries
     else if (fileName.endsWith(".exe") || fileName.endsWith(".msi"))
         contentType = "application/octet-stream"; // Forces download
     else if (fileName.endsWith(".deb"))
@@ -292,7 +365,6 @@ void SimpleHttpFileServer::sendFile(QTcpSocket* socket, const QString& fullFileP
     else if (fileName.endsWith(".apk"))
         contentType = "application/vnd.android.package-archive";
 
-    // Fonts
     else if (fileName.endsWith(".ttf"))
         contentType = "font/ttf";
     else if (fileName.endsWith(".woff"))
@@ -300,8 +372,22 @@ void SimpleHttpFileServer::sendFile(QTcpSocket* socket, const QString& fullFileP
     else if (fileName.endsWith(".woff2"))
         contentType = "font/woff2";
 
-    QString disposition = QString("attachment; filename=\"%1\"").arg(fileName);
 
+    bool renderable =
+        contentType.startsWith("text/") ||
+        contentType == "application/javascript" ||
+        contentType == "application/json" ||
+        contentType == "application/xml" ||
+        contentType == "application/pdf" ||
+        contentType.startsWith("image/") ||
+        contentType.startsWith("audio/") ||
+        contentType.startsWith("video/") ||
+        contentType.startsWith("font/");
+
+    bool forceDownload = !websiteMode || !renderable;
+    QString disposition = forceDownload
+        ? QString("attachment; filename=\"%1\"").arg(fileName)
+        : QString("inline; filename=\"%1\"").arg(fileName);
     QByteArray response;
     response += "HTTP/1.1 200 OK\r\n";
     response += "Content-Type: " + contentType.toUtf8() + "\r\n";

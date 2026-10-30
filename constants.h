@@ -11,20 +11,19 @@ extern  int DefaultChatServicePort;
 extern  int DefaultHttpServicePort;
 extern  int DefaultControlPort;
 extern  int DefaultProxyPort;
+extern const qreal DEFAULTFONTSIZE;
+extern qreal FONTSIZE;
+extern QString httpOnionAddress;
 
-// Returns the application data directory
 QString getAppDataDir();
+QString getWebsitesDir();
 
-// Returns the full path to the chat history file
 QString getChatHistoryFilePath();
 
-// Returns the directory where incoming files are saved
 QString getFileSaveDirPath();
 QString getContactsDirPath();
 
-// Returns the directory for www files
 QString getWWWDir();
-//tor http direcory
 QString getTorHttpHiddenDirPath();
 QString getTorChatHiddenDirPath();
 QString getCryptoDirPath();
@@ -42,7 +41,6 @@ enum class SoundType {
     UnknownContact
 };
 
-// Returns the resource path for a given SoundType
 QString soundResourcePath(SoundType type);
 
 #endif // CONSTANTS_H

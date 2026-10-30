@@ -16,7 +16,6 @@ public:
 
     QString getOnionAddress() const { return onionAddress; }
     QString getDisplayName() const { return displayName; }
-    //void updateStatus(bool available);
 
     void updateLastSeen(const QDateTime& lastSeen);
     void setSelected(bool selected);
@@ -58,7 +57,6 @@ private:
     QString displayName;
     bool isSelected;
     bool isHovered;
-    //bool isAvailable;
     QDateTime lastSeenTime;
 
     QLabel* nameLabel;

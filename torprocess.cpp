@@ -33,6 +33,26 @@ bool TorProcess::startTor(const QString& configPath) {
         Logger::log(Logger::INFO, "Tor process started successfully");
         QString output = torProcess->readAllStandardOutput();
         Logger::log(Logger::INFO, "Tor output: " + output);
+
+        const qint64 pid = torProcess->processId();
+        if (pid > 0) {
+            const QString pidPath = getAppDataDir() + "/torpid";
+            QFile f(pidPath);
+            if (f.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+                QTextStream out(&f);
+                out << pid << '\n';
+                f.close();
+                Logger::log(Logger::INFO,
+                    QString("Tor PID %1 written to %2").arg(pid).arg(pidPath));
+            } else {
+                Logger::log(Logger::WARNING,
+                    "Could not write tor PID file: " + pidPath
+                    + " (" + f.errorString() + ")");
+            }
+        } else {
+            Logger::log(Logger::WARNING, "Tor started but processId() returned 0");
+        }
+
         return true;
     }
 
@@ -56,10 +76,7 @@ void TorProcess::stopTor()
         torProcess = nullptr;
     }
 
-    // Kill any lingering Tor processes
-    QProcess cleanup;
-    cleanup.start("killall", QStringList() << "-9" << "tor");
-    cleanup.waitForFinished();
+    killStoredTorPid();
 
     Logger::log(Logger::INFO, "Tor processes cleaned up");
 }
@@ -104,7 +121,8 @@ QStringList TorProcess::getPossibleTorPaths()
     QStringList paths;
 
 #ifdef Q_OS_WIN
-    paths << "Tor/tor.exe"
+    paths << QApplication::applicationDirPath() + "/tor.exe"
+            << "Tor/tor.exe"
           << "C:/Program Files/Tor/tor.exe"
           << "C:/Program Files (x86)/Tor/tor.exe";
 #else
@@ -118,15 +136,14 @@ QStringList TorProcess::getPossibleTorPaths()
 }
 
 void TorProcess::cleanup() {
-    // Make sure to stop Tor if it's running
     stopTor();
+
 }
 
 void TorProcess::killExistingTorProcesses() {
    Logger::log(Logger::INFO, "Checking for existing Tor processes...");
 
 #ifdef Q_OS_WIN
-    // On Windows, use taskkill which is generally available
     QProcess killProcess;
     killProcess.start("taskkill", QStringList() << "/F" << "/IM" << "tor.exe");
     killProcess.waitForFinished(3000);
@@ -137,32 +154,26 @@ void TorProcess::killExistingTorProcesses() {
         Logger::log(Logger::INFO, "No existing Tor processes found or unable to terminate them");
     }
 #else
-    // On Unix-like systems, use a more portable approach
-    // First try with killall (most Linux distributions)
     QProcess checkKillall;
     checkKillall.start("which", QStringList() << "killall");
     checkKillall.waitForFinished();
 
     if (checkKillall.exitCode() == 0) {
-        // killall is available
         QProcess killProcess;
         killProcess.start("killall", QStringList() << "-9" << "tor");
         killProcess.waitForFinished(3000);
         Logger::log(Logger::INFO, "Attempted to terminate Tor processes using killall");
     } else {
-        // Try with pkill (available on most Unix systems)
         QProcess checkPkill;
         checkPkill.start("which", QStringList() << "pkill");
         checkPkill.waitForFinished();
 
         if (checkPkill.exitCode() == 0) {
-            // pkill is available
             QProcess killProcess;
             killProcess.start("pkill", QStringList() << "-9" << "-x" << "tor");
             killProcess.waitForFinished(3000);
             Logger::log(Logger::INFO, "Attempted to terminate Tor processes using pkill");
         } else {
-             //Last resort: try to find and kill tor processes using ps and kill
             QProcess psProcess;
             psProcess.start("ps", QStringList() << "-e" << "-o" << "pid,comm");
             psProcess.waitForFinished();
@@ -186,7 +197,6 @@ void TorProcess::killExistingTorProcesses() {
     }
 #endif
 
-    // Give the system a moment to fully release resources
     QThread::msleep(500);
 }
 
@@ -200,7 +210,6 @@ void TorProcess::newTorCircuit() {
 
 QTcpSocket socket;
 Logger::log(Logger::INFO, "Attempting to connect to control port 9051...");
-//socket.connectToHost("localhost", 9051);
 socket.connectToHost("localhost", DefaultControlPort);
 
 if (socket.waitForConnected(3000)) {
@@ -236,3 +245,39 @@ Notification("Tor Circuit", "Failed to request new circuit", 3000, QSystemTrayIc
 
 }
 
+void TorProcess::killStoredTorPid()
+{
+
+    const QString pidPath = getAppDataDir() + "/torpid";
+    QFile f(pidPath);
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        Logger::log(Logger::WARNING, QString("[tor-cleanup] No torpid file at %1").arg(pidPath));
+
+        return;
+    }
+
+    bool ok = false;
+    const qint64 pid = QString::fromUtf8(f.readAll()).trimmed().toLongLong(&ok);
+    f.close();
+
+    if (!ok || pid <= 0) {
+        Logger::log(Logger::WARNING, QString("[tor-cleanup] torpid file empty or invalid."));
+
+        QFile::remove(pidPath);
+        return;
+    }
+
+#ifdef Q_OS_WIN
+    QProcess p;
+    p.start("taskkill", {"/F", "/PID", QString::number(pid)});
+    p.waitForFinished(3000);
+#else
+    QProcess p;
+    p.start("kill", {"-9", QString::number(pid)});
+    p.waitForFinished(3000);
+    Logger::log(Logger::INFO, QString("[tor-cleanup] kill -9 PID%1").arg(pid));
+
+#endif
+
+    QFile::remove(pidPath);
+}
