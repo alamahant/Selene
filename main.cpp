@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
 
-#ifdef Q_OS_WIN
+//#ifdef Q_OS_WIN
     a.setStyle(QStyleFactory::create("Fusion"));
 
     QPalette lightPalette;
@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
     lightPalette.setColor(QPalette::HighlightedText, Qt::white);
 
     a.setPalette(lightPalette);
-#endif
+//#endif
 
 
     if (FONTSIZE > 0.0) {

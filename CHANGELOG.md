@@ -2,6 +2,18 @@
 
 All notable changes to Selene will be documented in this file.
 
+## [1.0.9] - 2026-10-30
+
+### Added
+- **Website Hosting**: Static sites can now be served alongside the file share over the same HTTP onion
+  - Site manager dialog with add, remove, enable/disable, rename, and copy URL
+  - Each site gets its own URL prefix (`/name/`), backed by a folder under `~/Documents/Selene/websites/`
+  - Renderable files are served inline, binaries download
+  - Requests without a trailing slash redirect to the canonical `/name/` URL
+  - Sites persist across restarts via QSettings
+  - Updated bundled tor and libevent to latest versions
+---
+
 ## [1.0.8] - 2026-10-30
 
 ### Added

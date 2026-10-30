@@ -87,6 +87,22 @@ Selene is designed for privacy advocates and secure communication enthusiasts, o
 
 <releases>
 
+<release version="1.0.9" date="2026-10-30">
+  <description>
+    <p>Added:</p>
+    <ul>
+      <li>Website Hosting: Static sites can now be served alongside the file share over the same HTTP onion</li>
+      <li>Site manager dialog with add, remove, enable/disable, rename, and copy URL</li>
+      <li>Each site gets its own URL prefix (/name/), backed by a folder under ~/Documents/Selene/websites/</li>
+      <li>Renderable files are served inline, binaries download</li>
+      <li>Requests without a trailing slash redirect to the canonical /name/ URL</li>
+      <li>Sites persist across restarts via QSettings</li>
+      <li>Updated bundled tor and libevent to latest versions</li>
+    </ul>
+  </description>
+</release>
+
+
 <release version="1.0.8" date="2026-10-30">
   <description>
     <p>Added:</p>
