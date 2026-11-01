@@ -44,6 +44,11 @@
 #include"bridgemanagerdialog.h"
 #include"sitemanagerdialog.h"
 #include"sitemanager.h"
+#include"torprocess.h"
+#include"torcirquitworker.h"
+#include<QThread>
+#include<QToolButton>
+#include<QMenu>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -57,6 +62,8 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+
+    TorProcess *torProcess() const;
 
 protected:
     bool eventFilter(QObject* obj, QEvent* event) override;
@@ -242,6 +249,23 @@ private:
     SiteManagerDialog* m_siteDialog = nullptr;
     SiteManager* m_siteManager = nullptr;
     QAction* openSiteManagerAction;
+    TorProcess* m_torProcess = nullptr;
+    QProgressBar* m_bootstrapBar = nullptr;
+
+private slots:
+    void onBootstrapProgress(int percent);
+    void onTorReady();
+    void onCircuitCountries(const QStringList& countries);
+
+private:
+    TorCircuitWorker* m_circuitWorker = nullptr;
+    QThread* m_circuitThread = nullptr;
+    QToolButton* m_circuitButton = nullptr;
+    QMenu* m_circuitMenu = nullptr;
+    QStringList m_circuitCountries;
+    QTimer* tick =nullptr;
+    QString flagFor(const QString& cc);
+
 };
 
 #endif // MAINWINDOW_H

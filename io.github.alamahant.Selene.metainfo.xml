@@ -87,6 +87,22 @@ Selene is designed for privacy advocates and secure communication enthusiasts, o
 
 <releases>
 
+<release version="1.1.1" date="2026-11-01">
+  <description>
+    <p>Changed:</p>
+    <ul>
+      <li>Tor Process: Redesigned as an instance-based class with signals, replacing the static design</li>
+      <li>New Tor Circuit: Now actually changes the relays, not just marks circuits dirty</li>
+      <li>Country Nodes: Displays entry, middle, and exit countries for the current circuit</li>
+    </ul>
+    <p>Added:</p>
+    <ul>
+      <li>Progress Bars: Visual feedback while connecting to a peer and while requesting a new circuit</li>
+      <li>Bootstrap Progress: Tracks Tor's real bootstrap phase on the Control Port</li>
+    </ul>
+  </description>
+</release>
+
 <release version="1.0.9" date="2026-10-30">
   <description>
     <p>Added:</p>

@@ -230,3 +230,11 @@ void ContactListWidget::setSelectedContact(const QString& onionAddress)
 }
 
 
+
+void ContactListWidget::setAllConnectButtonsEnabled(bool enabled)
+{
+    for (auto* card : contactCards) {
+        if (QPushButton* btn = card->getConnectBtn())
+            btn->setEnabled(enabled);
+    }
+}

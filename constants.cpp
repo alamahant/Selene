@@ -8,6 +8,8 @@ int DefaultChatServicePort;
 int DefaultHttpServicePort;
 int DefaultControlPort;
 int DefaultProxyPort;
+int connectionTimeout = 30;
+int circuitSettleTimeout = 15;
 
 #ifdef Q_OS_WIN
     const qreal DEFAULTFONTSIZE = 11;
@@ -21,6 +23,7 @@ QString httpOnionAddress = QString();
 QString getAppDataDir() {
     return QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
 }
+
 
 
 
@@ -58,9 +61,7 @@ QString getTorrcDirPath(){
     return getAppDataDir() + QDir::separator() + ".selene" + QDir::separator() + "torrc";
 }
 
-QString getConfigDirPath(){
-    return QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);;
-}
+
 
 QString getDocumentsDirPath(){
     return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QDir::separator() + "Selene";

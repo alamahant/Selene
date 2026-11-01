@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include"logger.h"
 
 static const char* kSettingsGroup = "sites";
 
@@ -90,15 +91,19 @@ bool SiteManager::addSite(const QString& prefix, const QString& path, QString* e
     s.path    = canonical;
     s.enabled = true;
     insertAndPersist(s);
+    Logger::log(Logger::INFO, QString("addSite: '%1' -> %2").arg(s.prefix, s.path));
     return true;
 }
 
 bool SiteManager::removeSite(const QString& prefix)
 {
     const QString norm = normalizePrefix(prefix);
-    if (!m_sites.contains(norm))
+    if (!m_sites.contains(norm)){
+        Logger::log(Logger::WARNING, QString("removeSite: '%1' not found").arg(norm));
         return false;
+    }
     m_sites.remove(norm);
+    Logger::log(Logger::INFO, QString("removeSite: '%1'").arg(norm));
     save();
     emit sitesChanged();
     return true;
@@ -312,7 +317,7 @@ void SiteManager::load()
         if (!s.path.isEmpty())
             m_sites.insert(s.prefix, s);
     }
-
+    Logger::log(Logger::INFO, QString("SiteManager loaded %1 site(s)").arg(m_sites.size()));
     settings.endGroup();
     emit sitesChanged();
 }
@@ -336,5 +341,8 @@ void SiteManager::save() const
     }
     settings.endGroup();
     settings.sync();
+    if (settings.status() != QSettings::NoError) {
+        Logger::log(Logger::ERROR, QString("save: QSettings error %1").arg(int(settings.status())));
+    }
 }
 

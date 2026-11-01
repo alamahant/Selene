@@ -46,7 +46,7 @@ public:
     void blockContact(const Contact& contact);
     void deleteContact(const Contact& contact);
     void setSelectedContact(const QString& onionAddress);
-
+    void setAllConnectButtonsEnabled(bool enabled);
 };
 
 #endif // CONTACTLISTWIDGET_H

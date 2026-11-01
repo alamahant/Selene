@@ -114,6 +114,7 @@ void ContactCardWidget::setConnected(bool connected) {
         connectBtn->setToolTip("Disconnect");
         statusDot->setStyleSheet("background-color: #4CAF50; border-radius: 6px;");
         statusLabel->setText("Connected");
+        connectBtn->setEnabled(false);
     } else {
         setDisconnected();
     }
@@ -231,11 +232,14 @@ QPushButton *ContactCardWidget::getConnectBtn() const
 
 
 void ContactCardWidget::setDisconnected() {
+
     isConnected = false;
     connectBtn->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
     connectBtn->setToolTip("Connect");
     statusDot->setStyleSheet("background-color: #FF5252; border-radius: 6px;");
     statusLabel->setText("Disconnected");
+    connectBtn->setEnabled(true);
+
     if (!offlineTimer) {
         offlineTimer = new QTimer(this);
         offlineTimer->setSingleShot(true);

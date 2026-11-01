@@ -53,14 +53,15 @@ static void killStoredTorPid()
 }
 
 
+
 int main(int argc, char *argv[])
 {
 
-#ifndef FLATHUB_BUILD
-    QCoreApplication::setOrganizationName("Alamahant");
-#endif
-    QCoreApplication::setApplicationName("Selene");
-    QCoreApplication::setApplicationVersion("1.0.8");
+    //#ifndef FLATHUB_BUILD
+        QCoreApplication::setOrganizationName("Alamahant");
+    //#endif
+        QCoreApplication::setApplicationName("Selene");
+        QCoreApplication::setApplicationVersion("1.1.1");
 
     killStoredTorPid();
 
@@ -72,7 +73,7 @@ int main(int argc, char *argv[])
     QDir().mkpath(getCryptoDirPath()); // Ensure the directory exists
     QDir().mkpath(getContactsDirPath()); // Ensure the directory exists
     QDir().mkpath(getFileSaveDirPath());
-    QDir().mkpath(getConfigDirPath());
+    //QDir().mkpath(getConfigDirPath());
     QDir().mkpath(getDocumentsDirPath());
     QDir().mkpath(getWWWDir());
     QDir().mkpath(getDownloadsDirPath());
@@ -138,8 +139,12 @@ int main(int argc, char *argv[])
 
     MainWindow w;
     w.show();
-    QObject::connect(&a, &QApplication::aboutToQuit, []() {
-        TorProcess::cleanup();
+
+    QObject::connect(&a, &QApplication::aboutToQuit, [&w]() {
+        if (w.torProcess())
+            w.torProcess()->stopTor();
     });
+
+
     return a.exec();
 }

@@ -41,6 +41,7 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+    , m_torProcess(new TorProcess(this))
     , settings(QSettings())
     , bridgeDialog(new BridgeManagerDialog(this))
     , m_siteManager(new SiteManager(this))
@@ -55,6 +56,23 @@ MainWindow::MainWindow(QWidget *parent)
                                   .arg(DefaultControlPort)
                                   .arg(DefaultProxyPort));
 
+    //
+    m_circuitThread = new QThread(this);
+    m_circuitWorker = new TorCircuitWorker();
+    m_circuitWorker->moveToThread(m_circuitThread);
+
+    connect(m_circuitThread, &QThread::finished,
+            m_circuitWorker, &QObject::deleteLater);
+    connect(m_circuitWorker, &TorCircuitWorker::done,
+            this, &MainWindow::onCircuitCountries);
+    connect(m_circuitWorker, &TorCircuitWorker::failed,
+            this, [](const QString& r) { qDebug() << "circuit lookup failed:" << r; });
+
+    m_circuitThread->start();
+    //
+
+    tick = new QTimer(this);
+    tick->setInterval(1000);
 
     QString docRootPath = getWWWDir();
     m_siteDialog = new SiteManagerDialog(m_siteManager, this);
@@ -77,15 +95,23 @@ MainWindow::MainWindow(QWidget *parent)
 
     cleanTmpWWWDirs();
 
+    connect(m_torProcess, &TorProcess::bootstrapProgress,
+            this, &MainWindow::onBootstrapProgress);
+
+    connect(m_torProcess, &TorProcess::torReady,
+            this, &MainWindow::onTorReady);
+
     if (torConfig.setupHiddenService()) {
         QString configPath = getAppDataDir() + "/.selene/torrc";
-        if (TorProcess::startTor(configPath)) {
+        if (m_torProcess->startTor(configPath)) {
             torConfig.readOnionAddress();
             QString onion = torConfig.getOnionAddress();
             networkManager = new NetworkManager(this);
             networkManager->initialize(onion);
+            m_torProcess->setNetworkManager(networkManager);
         }
     }
+    //m_torProcess->setNetworkManager(networkManager);
 
     httpOnionAddress = torConfig.getFileOnionAddress();
 
@@ -133,7 +159,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(networkManager, &NetworkManager::unknownContactMessageReceived,
             this, &MainWindow::handleUnknownContact);
 
-    TorProcess::torInstance = new TorProcess();
 
     securityManager = new SecurityManager(this);
     connect(securityManager, &SecurityManager::factoryResetRequested,
@@ -150,10 +175,6 @@ MainWindow::MainWindow(QWidget *parent)
     toolbar = getToolBar();
 
     connect(qApp, &QCoreApplication::aboutToQuit, this, &MainWindow::handleAppExit);
-
-
-
-
 
     QFile onionFile(getTorChatHiddenDirPath() + "/hostname");
     if (onionFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -191,6 +212,23 @@ MainWindow::MainWindow(QWidget *parent)
     setupCornerWidget();
 
     checkFirstRun();
+
+    connect(tick, &QTimer::timeout, this, [this]() {
+        if (!m_bootstrapBar) return;
+
+        const int v = m_bootstrapBar->value();
+
+        if (v < m_bootstrapBar->maximum()) {
+            m_bootstrapBar->setValue(v + 1);
+        }else{
+            connectButton->setEnabled(true);
+            if(contactListWidget) contactListWidget->setAllConnectButtonsEnabled(true);
+            newCircuitAction->setEnabled(true);
+
+            tick->stop();
+            m_bootstrapBar->setVisible(false);
+        }
+    });
 
 }
 
@@ -270,6 +308,13 @@ void MainWindow::setupChatArea() {
     connectionLayout->addWidget(connectButton);
     connectionLayout->addWidget(openChatButton);
 
+    m_bootstrapBar = new QProgressBar(this);
+    m_bootstrapBar->setFixedHeight(20);
+    m_bootstrapBar->setRange(0, 100);
+    m_bootstrapBar->setValue(1);
+
+    layout->addWidget(m_bootstrapBar);
+
     chatTabWidget = new QTabWidget(centralWidget);
     chatTabWidget->setTabsClosable(true);
 
@@ -343,9 +388,9 @@ MainWindow::~MainWindow() {
         networkManager->cleanup();
     }
 
-    if(TorProcess::torInstance){
-        delete TorProcess::torInstance;
-        TorProcess::torInstance = nullptr;
+    if(m_torProcess){
+        delete m_torProcess;
+        m_torProcess = nullptr;
     }
     if (emojiPicker) {
         delete emojiPicker;
@@ -360,6 +405,10 @@ MainWindow::~MainWindow() {
         delete httpServer;
         httpServer = nullptr;
     }
+
+    m_circuitThread->quit();
+    m_circuitThread->wait();
+
     delete ui;
 
 }
@@ -392,14 +441,28 @@ void MainWindow::connectToPeer() {
         return;
     }
 
+    if (m_bootstrapBar) {
+        m_bootstrapBar->setVisible(true);
+    }
 
-
+    connectButton->setDisabled(true);
+    if(contactListWidget) contactListWidget->setAllConnectButtonsEnabled(false);
+    newCircuitAction->setEnabled(false);
     QApplication::processEvents();
 
     statusBar()->showMessage("Connecting to peer. Please wait up to 30 seconds...", 6 * 1000);
     Notification("Connecting", "Connecting to peer. Please wait up to 30 seconds...");
 
+    if (m_bootstrapBar) {
+        m_bootstrapBar->setRange(0, connectionTimeout);
+        m_bootstrapBar->setValue(0);
+        m_bootstrapBar->setVisible(true);
+    }
+    if (m_bootstrapBar) {
+        m_bootstrapBar->setVisible(true);
+    }
 
+    tick->start();
 
     if (networkManager->connectToPeer(address)) {
         if (!chatDisplays.contains(address)) {
@@ -432,13 +495,16 @@ void MainWindow::handleConnectionStatus(bool connected, const QString& peerAddre
     updateStatus(connected ? "Connected" : "Disconnected");
 }
 
-
-
-
-
-
 void MainWindow::handlePeerConnected(const QString& peerAddress) {
 
+    connectButton->setEnabled(true);
+    if(contactListWidget) contactListWidget->setAllConnectButtonsEnabled(true);
+    newCircuitAction->setEnabled(true);
+
+    tick->stop();
+
+    if (m_bootstrapBar)
+        m_bootstrapBar->setVisible(false);
 
     if (peerAddressInput->text().trimmed() == peerAddress) {
         isConnected = true;
@@ -483,6 +549,7 @@ void MainWindow::handlePeerDisconnected(const QString& peerAddress) {
 
 void MainWindow::handleNetworkError(const QString& error) {
 
+
     updateStatus("Error: " + error);
     isConnected = false;
     connectButton->setText("Connect");
@@ -506,8 +573,6 @@ void MainWindow::onAddContactClicked() {
 
     addContact(QString());
 }
-
-
 
 
 void MainWindow::onContactSelected(const QString& onionAddress) {
@@ -1238,6 +1303,23 @@ QToolBar* MainWindow::getToolBar() {
     torLabel->setText("Tor");
     toolbar->addWidget(torLabel);
     toolbar->addAction(newCircuitAction);
+    //
+    m_circuitButton = new QToolButton(this);
+    m_circuitButton->setPopupMode(QToolButton::InstantPopup);
+    m_circuitButton->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    m_circuitButton->setAutoRaise(true);
+    m_circuitButton->setFixedWidth(16);
+    m_circuitButton->setArrowType(Qt::DownArrow);
+    m_circuitButton->setToolTip(tr("Show current Tor circuit path"));
+    m_circuitButton->setStyleSheet("QToolButton::menu-indicator { image: none; }");
+    m_circuitMenu = new QMenu(m_circuitButton);
+    m_circuitButton->setMenu(m_circuitMenu);
+    //
+
+    toolbar->addWidget(m_circuitButton);
+
+
+
     toolbar->addAction(editTorrcPortsAction);
     toolbar->addAction(newHttpOnionAction);
     toolbar->addAction(newChatOnionAction);
@@ -1533,7 +1615,7 @@ void MainWindow::playSound(SoundType type, bool playIt)
     if (!m_soundEffects.contains(type)) {
         QSoundEffect* effect = new QSoundEffect(this);
         effect->setSource(QUrl("qrc" + soundResourcePath(type)));
-        effect->setVolume(0.8);
+        effect->setVolume(0.5);
         m_soundEffects[type] = effect;
     }
     QSoundEffect* effect = m_soundEffects[type];
@@ -1939,8 +2021,37 @@ void MainWindow::setupActions()
 
     newCircuitAction->setObjectName("newcircuit");
     newCircuitAction->setToolTip(tr("Request a new Tor circuit"));
-    connect(newCircuitAction, &QAction::triggered, this, []() {
-        TorProcess::torInstance->newTorCircuit();
+    connect(newCircuitAction, &QAction::triggered, this, [this]() {
+
+        if (networkManager && !networkManager->getConnectedPeers().isEmpty()) {
+            Logger::log(Logger::INFO, "New circuit blocked - a peer is connected");
+            Notification("Tor Circuit",
+                         "Disconnect from the peer before requesting a new circuit",
+                         3000, QSystemTrayIcon::Warning);
+            return;
+        }
+
+        m_torProcess->newTorCircuit();
+        QMetaObject::invokeMethod(m_circuitWorker, "fetch",
+                                  Qt::QueuedConnection,
+                                  Q_ARG(int, DefaultControlPort),
+                                  Q_ARG(int, DefaultProxyPort));
+        connectButton->setDisabled(true);
+        if(contactListWidget) contactListWidget->setAllConnectButtonsEnabled(false);
+
+        if (m_bootstrapBar) {
+            m_bootstrapBar->setRange(0, circuitSettleTimeout);
+            m_bootstrapBar->setValue(0);
+            m_bootstrapBar->setVisible(true);
+        }
+
+        tick->start();
+
+        QTimer::singleShot(circuitSettleTimeout * 1000, this, [this]() {
+                connectButton->setEnabled(true);
+                if(contactListWidget) contactListWidget->setAllConnectButtonsEnabled(true);
+
+            });
     });
 
     getHttpOnionAction = new QAction(QIcon(":/icons/copy.svg"), tr(""), this);
@@ -2836,20 +2947,13 @@ void MainWindow::performFactoryReset() {
         );
     if (reply != QMessageBox::Yes) return;
     QString appDataDir = getAppDataDir();
-    QString configDir = getConfigDirPath();
 
     QDir dir(appDataDir);
     bool deleted = dir.exists() ? dir.removeRecursively() : false;
 
-    QDir dirConfig(configDir);
-    bool deletedConfig = dirConfig.exists() ? dirConfig.removeRecursively() : true;
-
-    QFile configFile(getConfigDirPath() + ".conf");
-    if (configFile.exists()) {
-        if (!configFile.remove()) {
-        } else {
-        }
-    }
+    QSettings settings;
+    QString settingsPath = settings.fileName();
+    bool deletedConfig = QFile::remove(settingsPath);
 
     if (deleted && deletedConfig) {
         QMessageBox::information(
@@ -3200,4 +3304,94 @@ void MainWindow::setupCornerWidget()
     if (menubar) {
         menuBar()->setCornerWidget(cornerContainer, Qt::TopRightCorner);
     }
+}
+
+TorProcess *MainWindow::torProcess() const
+{
+    return m_torProcess;
+}
+
+// mw.cpp
+void MainWindow::onBootstrapProgress(int percent)
+{
+    if (m_bootstrapBar) {
+        m_bootstrapBar->setValue(percent);
+        m_bootstrapBar->setVisible(percent < 100);
+    }
+}
+
+void MainWindow::onTorReady()
+{
+    if (m_bootstrapBar)
+        m_bootstrapBar->setVisible(false);
+
+    QMetaObject::invokeMethod(m_circuitWorker, "fetch",
+                              Qt::QueuedConnection,
+                              Q_ARG(int, DefaultControlPort),
+                              Q_ARG(int, DefaultProxyPort));
+}
+
+/*
+void MainWindow::onCircuitCountries(const QStringList& countries)
+{
+    m_circuitMenu->clear();
+
+    const QStringList roles = {tr("Entry"), tr("Middle"), tr("Exit")};
+
+    if (countries.isEmpty()) {
+        QAction* a = m_circuitMenu->addAction(tr("Unknown"));
+        a->setEnabled(false);
+        return;
+    }
+
+    for (int i = 0; i < countries.size() && i < 3; ++i) {
+        QAction* a = m_circuitMenu->addAction(
+            QString("%1: %2").arg(roles.value(i, tr("Hop")), countries[i]));
+        a->setEnabled(false);
+        qDebug()<<countries[i];
+    }
+}
+*/
+
+void MainWindow::onCircuitCountries(const QStringList& countries)
+{
+    m_circuitMenu->clear();
+
+    const QStringList roles = {tr("Entry"), tr("Middle"), tr("Exit")};
+
+    if (countries.isEmpty()) {
+        QAction* a = m_circuitMenu->addAction(tr("Unknown"));
+        a->setEnabled(false);
+        return;
+    }
+
+    for (int i = 0; i < countries.size() && i < 3; ++i) {
+        const QString code = countries[i];
+        const QString flag = flagFor(code);
+
+        const QString text = flag.isEmpty()
+            ? QString("%1: %2").arg(roles.value(i, tr("Hop")), code)
+            : QString("%1: %2 %3").arg(roles.value(i, tr("Hop")), flag, code);
+
+        QAction* a = m_circuitMenu->addAction(text);
+        a->setEnabled(false);
+        Logger::log(Logger::DEBUG, countries[i]);
+    }
+}
+
+QString MainWindow::flagFor(const QString& cc)
+{
+    if (cc.size() != 2)
+        return {};
+    const QChar a = cc[0].toUpper();
+    const QChar b = cc[1].toUpper();
+    if (a < 'A' || a > 'Z' || b < 'A' || b > 'Z')
+        return {};
+
+    const int base = 0x1F1E6;   // regional indicator 'A'
+    const uint cps[2] = {
+        uint(base + a.unicode() - 'A'),
+        uint(base + b.unicode() - 'A')
+    };
+    return QString::fromUcs4(cps, 2);
 }

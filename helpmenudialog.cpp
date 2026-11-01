@@ -120,6 +120,22 @@ QString HelpMenuDialog::getWhatsNewContent() {
 <p style="margin: 5px 0;"><strong>Platform:</strong> Cross-platform</p>
 </div>
 
+<div style="margin: 30px 0;">
+<h4 style="color: #2c3e50;">What's New in Version 1.1.1 (November 1, 2026)</h4>
+
+<p style="text-align: left; margin: 10px 20px; font-weight: bold; color: #2c3e50;">Changed:</p>
+<p style="text-align: left; margin: 5px 20px;">
+• Tor Process: Redesigned as an instance-based class with signals, replacing the static design<br>
+• New Tor Circuit: Now actually changes the relays, not just marks circuits dirty<br>
+• Country Nodes: Displays entry, middle, and exit countries for the current circuit<br>
+</p>
+
+<p style="text-align: left; margin: 10px 20px; font-weight: bold; color: #2c3e50;">Added:</p>
+<p style="text-align: left; margin: 5px 20px;">
+• Progress Bars: Visual feedback while connecting to a peer and while requesting a new circuit<br>
+• Bootstrap Progress: Tracks Tor's real bootstrap phase on the Control Port<br>
+</p>
+</div>
 
 <div style="margin: 30px 0;">
 <h4 style="color: #2c3e50;">What's New in Version 1.0.8 (October 30, 2026)</h4>

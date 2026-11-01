@@ -14,6 +14,8 @@ extern  int DefaultProxyPort;
 extern const qreal DEFAULTFONTSIZE;
 extern qreal FONTSIZE;
 extern QString httpOnionAddress;
+extern int connectionTimeout;
+extern int circuitSettleTimeout;
 
 QString getAppDataDir();
 QString getWebsitesDir();
@@ -28,7 +30,6 @@ QString getTorHttpHiddenDirPath();
 QString getTorChatHiddenDirPath();
 QString getCryptoDirPath();
 QString getTorrcDirPath();
-QString getConfigDirPath();
 QString getDocumentsDirPath();
 QString getDownloadsDirPath();
 

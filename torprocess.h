@@ -1,33 +1,44 @@
-#ifndef TORPROCESS_H
-#define TORPROCESS_H
+#pragma once
+
+#include <QObject>
 #include <QProcess>
 #include <QString>
-#include "logger.h"
-#include<QMessageBox>
-class TorProcess
+#include <QStringList>
+#include"networkmanager.h"
+
+class TorProcess : public QObject
 {
+    Q_OBJECT
+
 public:
-    TorProcess();
-    static bool startTor(const QString& configPath);
-    static void stopTor();
-    static bool isTorRunning();
-    static QString findTorPath();
-    static void cleanup();
-    static void killExistingTorProcesses();
-    static void setTorProcess(QProcess *newTorProcess);
+    explicit TorProcess(QObject* parent = nullptr);
+    ~TorProcess() override;
 
-    static TorProcess* torInstance;  // For the single TorProcess instance
-
-public slots:
+    bool startTor(const QString& configPath);
+    void stopTor();
+    bool isTorRunning() const;
+    void cleanup();
+    void killExistingTorProcesses();
     void newTorCircuit();
 
-private:
-    static QProcess* torProcess;
-    static void killStoredTorPid();
-
+    static QString findTorPath();
     static QStringList getPossibleTorPaths();
+
+signals:
+    void bootstrapProgress(int percent);
+    void torReady();
+
+private slots:
+    void trackBootstrapProgress();
+
+private:
+    void killStoredTorPid();
+    static int parseProgress(const QString& response);
+
+    QProcess* m_torProcess = nullptr;
+
 public:
-
+    void setNetworkManager(NetworkManager* nm);
+private:
+    NetworkManager* m_networkManager = nullptr;
 };
-
-#endif // TORPROCESS_H

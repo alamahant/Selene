@@ -216,6 +216,7 @@ find_package(OpenSSL REQUIRED)
         addsitedialog.cpp addsitedialog.h
         sitemanager.cpp sitemanager.h
         sitemanagerdialog.cpp sitemanagerdialog.h
+        torcirquitworker.cpp torcirquitworker.h
 
     )
 # Define target properties for Android with Qt 6 as:

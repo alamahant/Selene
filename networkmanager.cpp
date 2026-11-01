@@ -253,7 +253,7 @@ bool NetworkManager::connectToPeer(const QString& peerAddress) {
 
     QTimer* connectTimeout = new QTimer(newSocket);
     connectTimeout->setSingleShot(true);
-    connectTimeout->setInterval(30000); // 30 seconds
+    connectTimeout->setInterval(connectionTimeout * 1000); // 30 seconds
 
     connect(newSocket, &QTcpSocket::connected, connectTimeout, &QTimer::stop);
     connect(newSocket, &QTcpSocket::connected, connectTimeout, &QTimer::deleteLater);

@@ -2,6 +2,20 @@
 
 All notable changes to Selene will be documented in this file.
 
+
+## [1.1.1] - 2026-11-01
+
+### Changed
+- **Tor Process**: Redesigned as an instance-based class with signals, replacing the static design
+- **New Tor Circuit**: Now actually changes the relays, not just marks circuits dirty
+- **Country Nodes**: Displays entry, middle, and exit countries for the current circuit
+
+### Added
+- **Progress Bars**: Visual feedback while connecting to a peer and while requesting a new circuit
+- **Bootstrap Progress**: Tracks Tor's real bootstrap phase on the Control Port
+
+---
+
 ## [1.0.9] - 2026-10-30
 
 ### Added
