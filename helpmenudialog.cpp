@@ -121,6 +121,21 @@ QString HelpMenuDialog::getWhatsNewContent() {
 </div>
 
 <div style="margin: 30px 0;">
+<h4 style="color: #2c3e50;">What's New in Version 1.1.2 (November 6, 2026)</h4>
+
+<p style="text-align: left; margin: 10px 20px; font-weight: bold; color: #2c3e50;">Added:</p>
+<p style="text-align: left; margin: 5px 20px;">
+• Mail: A full peer-to-peer email client over Tor. Write to and receive from user@onion.onion addresses, no account with anyone, no third-party server in the middle<br>
+• Mail Compose: Compose tab with To, Subject, Body, account selector, and a Retry button for failed messages<br>
+• Mail Inbox: A Start/Stop Listening button on the Inbox tab. Incoming mail appears as it arrives, no manual refresh<br>
+• Mail Attachments: Attach files to a message. They are shared as links through your Tor onion and added to the body<br>
+• Mail Notifications: A sound plays when new mail arrives<br>
+• Mail Accounts: Create and remove mail addresses tied to your app's own Tor hidden service<br>
+• Dropbox: A one-way file drop over Tor. Share a link, anyone can upload a file to your Downloads folder without an account, and every upload is logged<br>
+</p>
+</div>
+
+<div style="margin: 30px 0;">
 <h4 style="color: #2c3e50;">What's New in Version 1.1.1 (November 1, 2026)</h4>
 
 <p style="text-align: left; margin: 10px 20px; font-weight: bold; color: #2c3e50;">Changed:</p>

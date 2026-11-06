@@ -49,6 +49,11 @@
 #include<QThread>
 #include<QToolButton>
 #include<QMenu>
+#include"dropboxdialog.h"
+#include "mailmanager.h"
+#include "mailworker.h"
+#include"maildialog.h"
+#include<QThread>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -265,7 +270,33 @@ private:
     QStringList m_circuitCountries;
     QTimer* tick =nullptr;
     QString flagFor(const QString& cc);
+private:
+    QString m_dropboxUuid;
+    bool m_dropboxPublished = false;
+    DropboxDialog* m_dropboxDialog = nullptr;
 
+    void showDropboxDialog();
+    void onNewDropboxUuid(bool removeOld);
+    void onPublishDropbox();
+    void onUnpublishDropbox();
+    void updateDropboxDialog();
+
+    QString createDropboxPage();
+    QString dropboxUrl(const QString& uuid) const;
+    QAction* m_dropboxAction;
+    void saveDropboxUuid();
+    void loadDropboxUuid();
+
+private:
+    MailManager* m_mailManager = nullptr;
+    MailWorker*  m_mailWorker  = nullptr;
+    QThread*     m_mailThread  = nullptr;
+    QAction* getMailOnionAction = nullptr;
+    QAction* newMailOnionAction = nullptr;
+    MailDialog* m_mailDialog = nullptr;
+private slots:
+    void openMailDialog();
+    void onMailReceived(int count);
 };
 
 #endif // MAINWINDOW_H

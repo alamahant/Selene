@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""
+onion-smtp-forwarder
+Listens on a local TCP port, accepts an SMTP connection from Postfix,
+and forwards it through Tor's SOCKS5 proxy to <onion>:25.
+
+Usage:
+    onion-smtp-forwarder <listen_port> <onion_host> [socks_host] [socks_port]
+
+Example:
+    onion-smtp-forwarder 23000 peer.onion 127.0.0.1 9050
+"""
+
+import socket
+import struct
+import sys
+import threading
+
+
+def socks5_connect(socks_host, socks_port, target_host, target_port, timeout=30):
+    s = socket.create_connection((socks_host, socks_port), timeout=timeout)
+
+    # Greeting: version 5, one method (no auth)
+    s.sendall(b"\x05\x01\x00")
+    resp = s.recv(2)
+    if len(resp) != 2 or resp[0] != 0x05 or resp[1] != 0x00:
+        s.close()
+        raise RuntimeError("SOCKS5 greeting failed")
+
+    # CONNECT request: version 5, cmd 0x01, reserved, addr type 0x03 (domain)
+    host_bytes = target_host.encode("idna")
+    req = b"\x05\x01\x00\x03" + bytes([len(host_bytes)]) + host_bytes
+    req += struct.pack(">H", target_port)
+    s.sendall(req)
+
+    resp = s.recv(10)
+    if len(resp) < 2 or resp[0] != 0x05 or resp[1] != 0x00:
+        s.close()
+        raise RuntimeError(f"SOCKS5 connect failed: {resp!r}")
+
+    return s
+
+
+def pipe(src, dst):
+    try:
+        while True:
+            data = src.recv(65536)
+            if not data:
+                break
+            dst.sendall(data)
+    except (ConnectionResetError, BrokenPipeError, OSError):
+        pass
+    finally:
+        try:
+            dst.shutdown(socket.SHUT_WR)
+        except OSError:
+            pass
+
+
+def handle(client, target_host, socks_host, socks_port):
+    try:
+        upstream = socks5_connect(socks_host, socks_port, target_host, 25)
+    except Exception as e:
+        sys.stderr.write(f"forwarder: {e}\n")
+        client.close()
+        return
+
+    t1 = threading.Thread(target=pipe, args=(client, upstream), daemon=True)
+    t2 = threading.Thread(target=pipe, args=(upstream, client), daemon=True)
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+    client.close()
+    upstream.close()
+
+
+def main():
+    if len(sys.argv) < 3:
+        sys.stderr.write(__doc__)
+        sys.exit(1)
+
+    listen_port = int(sys.argv[1])
+    target_host = sys.argv[2]
+    socks_host  = sys.argv[3] if len(sys.argv) > 3 else "127.0.0.1"
+    socks_port  = int(sys.argv[4]) if len(sys.argv) > 4 else 9050
+
+    srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    srv.bind(("127.0.0.1", listen_port))
+    srv.listen(16)
+    sys.stderr.write(f"forwarder: listening on 127.0.0.1:{listen_port} -> "
+                     f"{target_host}:25 via {socks_host}:{socks_port}\n")
+    sys.stderr.flush()
+    while True:
+        client, _ = srv.accept()
+        threading.Thread(target=handle,
+                         args=(client, target_host, socks_host, socks_port),
+                         daemon=True).start()
+
+
+if __name__ == "__main__":
+    main()

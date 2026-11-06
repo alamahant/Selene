@@ -9,7 +9,6 @@ TorCircuitWorker::TorCircuitWorker(QObject* parent)
 
 void TorCircuitWorker::fetch(int controlPort, int socksPort)
 {
-    // 1. Force a circuit to be built (NEWNYM alone doesn't build one).
     {
         QTcpSocket probe;
         QNetworkProxy socks(QNetworkProxy::Socks5Proxy, "127.0.0.1", socksPort);
@@ -19,7 +18,6 @@ void TorCircuitWorker::fetch(int controlPort, int socksPort)
         probe.abort();
     }
 
-    // 2. Query the circuit on the control port.
     QTcpSocket ctrl;
     ctrl.connectToHost("127.0.0.1", controlPort);
     if (!ctrl.waitForConnected(3000)) {
@@ -101,8 +99,6 @@ QString TorCircuitWorker::lookupCountry(QTcpSocket& ctrl, const QString& fingerp
 
 QString TorCircuitWorker::parseCountry(const QString& response)
 {
-    // Response: 250-ip-to-country/1.2.3.4=rs\r\n250 OK\r\n
-    // Or:       250-ip-to-country/1.2.3.4="RS","SRB","SERBIA"\r\n250 OK\r\n
     const int eq = response.indexOf('=');
     if (eq < 0)
         return "??";

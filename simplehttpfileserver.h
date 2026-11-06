@@ -49,6 +49,10 @@ private:
     QHash<QTcpSocket*, QByteArray> m_buffers;
 
     SiteManager* m_siteManager = nullptr;
+
+
+    void handleDropUpload(QTcpSocket* socket, const QByteArray& headers,
+                          const QByteArray& body, const QString& path);
 };
 
 

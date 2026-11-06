@@ -6,6 +6,9 @@
 #include <QDateTime>
 #include <QDebug>
 #include<QUrl>
+#include"constants.h"
+#include<QUuid>
+#include"logger.h"
 
 SimpleHttpFileServer::SimpleHttpFileServer(const QString& directory, int port, SiteManager *siteManager, QObject* parent)
     : QObject(parent), m_directory(directory), m_port(port), m_running(false), m_server(nullptr), m_siteManager(siteManager)
@@ -80,6 +83,7 @@ void SimpleHttpFileServer::onNewConnection()
     }
 }
 
+/*
 void SimpleHttpFileServer::onReadyRead()
 {
     QTcpSocket* socket = qobject_cast<QTcpSocket*>(sender());
@@ -89,6 +93,34 @@ void SimpleHttpFileServer::onReadyRead()
     m_buffers[socket].append(socket->readAll());
 
     if (!m_buffers[socket].contains("\r\n\r\n"))
+        return;
+
+    handleRequest(socket);
+    m_buffers.remove(socket);
+}
+*/
+
+void SimpleHttpFileServer::onReadyRead()
+{
+    QTcpSocket* socket = qobject_cast<QTcpSocket*>(sender());
+    if (!socket)
+        return;
+
+    m_buffers[socket].append(socket->readAll());
+
+    const QByteArray& buf = m_buffers[socket];
+    const int headerEnd = buf.indexOf("\r\n\r\n");
+    if (headerEnd < 0)
+        return;
+
+    int contentLength = 0;
+    const QByteArray headerBlock = buf.left(headerEnd);
+    for (const QByteArray& line : headerBlock.split('\n')) {
+        if (line.toLower().startsWith("content-length:"))
+            contentLength = line.mid(15).trimmed().toInt();
+    }
+
+    if (buf.size() < headerEnd + 4 + contentLength)
         return;
 
     handleRequest(socket);
@@ -147,12 +179,22 @@ void SimpleHttpFileServer::handleRequest(QTcpSocket* socket)
     QTextStream lineStream(&line);
     lineStream >> method >> path;
 
+    QString decodedPath = QUrl::fromPercentEncoding(path.toUtf8());
+
+    if (method == "POST" && decodedPath.startsWith("/drop/")) {
+        const int headerEnd = request.indexOf("\r\n\r\n");
+        if (headerEnd < 0) { sendNotFound(socket); return; }
+        const QByteArray headers = request.left(headerEnd);
+        const QByteArray body = request.mid(headerEnd + 4);
+        handleDropUpload(socket, headers, body, decodedPath);
+        return;
+    }
+
     if (method != "GET") {
         sendNotFound(socket);
         return;
     }
 
-    QString decodedPath = QUrl::fromPercentEncoding(path.toUtf8());
 
 
 
@@ -164,9 +206,7 @@ void SimpleHttpFileServer::handleRequest(QTcpSocket* socket)
     Site site;
     bool hasSite = (m_siteManager != nullptr) && m_siteManager->match(decodedPath, site);
 
-    qDebug() << "req:" << decodedPath
-             << "hasSite:" << hasSite
-             << "site:" << (hasSite ? site.prefix : QString("null"));
+
 
     if (hasSite && site.enabled && decodedPath + "/" == site.prefix) {
         QByteArray resp;
@@ -422,4 +462,96 @@ void SimpleHttpFileServer::restart()
 {
     stop();
     start();
+}
+
+void SimpleHttpFileServer::handleDropUpload(QTcpSocket* socket,
+                                            const QByteArray& headers,
+                                            const QByteArray& body,
+                                            const QString& path)
+{
+    const QString uuid = path.section('/', 2, 2);
+    if (uuid.isEmpty()) { sendNotFound(socket); return; }
+
+    Site site;
+    const bool hasSite = m_siteManager
+        && m_siteManager->match("/" + uuid + "/", site)
+        && site.enabled;
+    if (!hasSite) { sendNotFound(socket); return; }
+
+    QByteArray boundary;
+    for (const QByteArray& line : headers.split('\n')) {
+        if (line.toLower().contains("content-type:") && line.contains("boundary=")) {
+            boundary = line.mid(line.indexOf("boundary=") + 9).trimmed();
+            break;
+        }
+    }
+    if (boundary.isEmpty()) { sendNotFound(socket); return; }
+
+    const QByteArray delim = "--" + boundary;
+
+    int partStart = body.indexOf(delim);
+    if (partStart < 0) { sendNotFound(socket); return; }
+    partStart += delim.size();
+    if (body.mid(partStart, 2) == "\r\n")
+        partStart += 2;
+
+    int headerEnd = body.indexOf("\r\n\r\n", partStart);
+    if (headerEnd < 0) { sendNotFound(socket); return; }
+    const QByteArray partHeaders = body.mid(partStart, headerEnd - partStart);
+
+    QString filename = "upload.bin";
+    int fn = partHeaders.indexOf("filename=\"");
+    if (fn >= 0) {
+        fn += 10;
+        int fnEnd = partHeaders.indexOf('"', fn);
+        if (fnEnd > fn)
+            filename = QString::fromUtf8(partHeaders.mid(fn, fnEnd - fn));
+    }
+    filename = QFileInfo(filename).fileName();
+    if (filename.isEmpty())
+        filename = "upload.bin";
+
+    int dataStart = headerEnd + 4;
+    int dataEnd = body.indexOf("\r\n" + delim, dataStart);
+    if (dataEnd < 0)
+        dataEnd = body.size();
+
+    const QByteArray fileData = body.mid(dataStart, dataEnd - dataStart);
+
+    QString outPath = getDownloadsDirPath() + "/" + filename;
+    if (QFile::exists(outPath))
+        outPath = getDownloadsDirPath() + "/" +
+                  QUuid::createUuid().toString(QUuid::WithoutBraces) + "_" + filename;
+
+    QFile out(outPath);
+    if (!out.open(QIODevice::WriteOnly)) { sendNotFound(socket); return; }
+    out.write(fileData);
+    out.close();
+
+    Logger::log(Logger::INFO,
+        QString("Dropbox upload: '%1' (%2 bytes) -> %3")
+            .arg(filename)
+            .arg(fileData.size())
+            .arg(outPath));
+
+    QFile dropLog(getDownloadsDirPath() + "/dropbox.log");
+    if (dropLog.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+        QTextStream log(&dropLog);
+        log << QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+            << " | " << uuid
+            << " | " << filename
+            << " | " << fileData.size() << " bytes\n";
+        dropLog.close();
+    }
+
+    const QByteArray resp =
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: text/html; charset=utf-8\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "<html><body><h1>Thanks</h1><p>File received: <code>"
+        + filename.toHtmlEscaped().toUtf8() +
+        "</code></p></body></html>";
+    socket->write(resp);
+    socket->disconnectFromHost();
 }

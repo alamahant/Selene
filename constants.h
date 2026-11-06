@@ -39,7 +39,8 @@ enum class SoundType {
     IncomingConnection,
     MessageReceived,
     MessageSent,
-    UnknownContact
+    UnknownContact,
+    EmailReceived
 };
 
 QString soundResourcePath(SoundType type);

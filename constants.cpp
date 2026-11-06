@@ -90,6 +90,8 @@ QString soundResourcePath(SoundType type) {
         return QStringLiteral(":/sound/messageSent.wav");
     case SoundType::UnknownContact:
         return QStringLiteral(":/sound/unknownContact.wav");
+    case SoundType::EmailReceived:
+        return QStringLiteral(":/sound/mail.wav");
     default:
         return QString();
     }

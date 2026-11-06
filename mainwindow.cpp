@@ -56,7 +56,6 @@ MainWindow::MainWindow(QWidget *parent)
                                   .arg(DefaultControlPort)
                                   .arg(DefaultProxyPort));
 
-    //
     m_circuitThread = new QThread(this);
     m_circuitWorker = new TorCircuitWorker();
     m_circuitWorker->moveToThread(m_circuitThread);
@@ -65,11 +64,11 @@ MainWindow::MainWindow(QWidget *parent)
             m_circuitWorker, &QObject::deleteLater);
     connect(m_circuitWorker, &TorCircuitWorker::done,
             this, &MainWindow::onCircuitCountries);
-    connect(m_circuitWorker, &TorCircuitWorker::failed,
-            this, [](const QString& r) { qDebug() << "circuit lookup failed:" << r; });
+    connect(m_circuitWorker, &TorCircuitWorker::failed, this, [](const QString& r) {
+        Logger::log(Logger::ERROR, "circuit lookup failed: " + r);
+    });
 
     m_circuitThread->start();
-    //
 
     tick = new QTimer(this);
     tick->setInterval(1000);
@@ -111,9 +110,48 @@ MainWindow::MainWindow(QWidget *parent)
             m_torProcess->setNetworkManager(networkManager);
         }
     }
-    //m_torProcess->setNetworkManager(networkManager);
 
     httpOnionAddress = torConfig.getFileOnionAddress();
+
+
+    qRegisterMetaType<MailItem>("MailItem");
+
+    m_mailManager = new MailManager(&torConfig, this);
+    m_mailDialog = new MailDialog(m_mailManager, this);
+    m_mailThread = new QThread(this);
+    m_mailWorker = new MailWorker();                 // no parent — will be moved
+    m_mailWorker->moveToThread(m_mailThread);
+
+    connect(m_mailThread, &QThread::started,  m_mailWorker, &MailWorker::start);
+    connect(m_mailThread, &QThread::finished, m_mailWorker, &QObject::deleteLater);
+
+    connect(m_mailWorker, &MailWorker::mailSent,
+            m_mailManager, &MailManager::onMailSent);
+    connect(m_mailWorker, &MailWorker::mailFailed,
+            m_mailManager, &MailManager::onMailFailed);
+
+    connect(m_mailWorker, &MailWorker::receiverStarted,
+            m_mailManager, &MailManager::onReceiverStarted);
+    connect(m_mailWorker, &MailWorker::receiverStopped,
+            m_mailManager, &MailManager::onReceiverStopped);
+
+    m_mailManager->setWorker(m_mailWorker);
+
+    connect(m_mailManager, &MailManager::messageReceived,
+            this, &MainWindow::onMailReceived);
+
+    connect(m_mailDialog, &MailDialog::requestPlayMailSound, this, [this]{
+        playSound(SoundType::EmailReceived, play);
+    });
+    connect(m_mailDialog, &MailDialog::requestHttpServerStart, this, [this]() {
+        if (httpServer->isRunning())
+        {
+            httpServer->restart();
+        }else{
+            httpServer->start();
+        }
+    });
+    m_mailThread->start();
 
     contactManager = networkManager->getContactManager();
 
@@ -229,6 +267,8 @@ MainWindow::MainWindow(QWidget *parent)
             m_bootstrapBar->setVisible(false);
         }
     });
+
+    loadDropboxUuid();
 
 }
 
@@ -409,6 +449,10 @@ MainWindow::~MainWindow() {
     m_circuitThread->quit();
     m_circuitThread->wait();
 
+    if (m_mailThread) {
+        m_mailThread->quit();
+        m_mailThread->wait();
+    }
     delete ui;
 
 }
@@ -424,7 +468,7 @@ void MainWindow::connectToPeer() {
     QString address = peerAddressInput->text().trimmed();
 
     if (networkManager->isPeerConnected(address)) {
-        networkManager->setActiveConnection(address);  // Add this line
+        networkManager->setActiveConnection(address);
 
         networkManager->disconnectFromPeer(address);
         return;
@@ -1303,7 +1347,6 @@ QToolBar* MainWindow::getToolBar() {
     torLabel->setText("Tor");
     toolbar->addWidget(torLabel);
     toolbar->addAction(newCircuitAction);
-    //
     m_circuitButton = new QToolButton(this);
     m_circuitButton->setPopupMode(QToolButton::InstantPopup);
     m_circuitButton->setToolButtonStyle(Qt::ToolButtonIconOnly);
@@ -1314,7 +1357,6 @@ QToolBar* MainWindow::getToolBar() {
     m_circuitButton->setStyleSheet("QToolButton::menu-indicator { image: none; }");
     m_circuitMenu = new QMenu(m_circuitButton);
     m_circuitButton->setMenu(m_circuitMenu);
-    //
 
     toolbar->addWidget(m_circuitButton);
 
@@ -1692,6 +1734,18 @@ void MainWindow::setupMenuBar()
     QMenu* torMenu = menubar->addMenu(tr("Tor"));
     newCircuitAction->setText(tr("New Tor Circuit"));
     torMenu->addAction(newCircuitAction);
+    torMenu->addSeparator();
+    editTorrcPortsAction->setText("Edit Torrc Ports");
+    torMenu->addAction(editTorrcPortsAction);
+    torMenu->addSeparator();
+    //newChatOnionAction->setText("New Chat Onion");
+    torMenu->addAction(newChatOnionAction);
+    torMenu->addSeparator();
+    //newHttpOnionAction->setText("New Http Onion");
+    torMenu->addAction(newHttpOnionAction);
+    torMenu->addSeparator();
+    //newMailOnionAction->setText("New Email Onion");
+    torMenu->addAction(newMailOnionAction);
 
     QMenu* httpMenu = menubar->addMenu(tr("HTTP Server"));
 
@@ -1722,6 +1776,9 @@ void MainWindow::setupMenuBar()
 
     openSiteManagerAction->setText("Open Websites Manager");
     httpMenu->addAction(openSiteManagerAction);
+    httpMenu->addSeparator();
+
+
 
     QMenu* chatMenu = menubar->addMenu(tr("Chat"));
     clearCurrentHistoryAction->setText(tr("Clear Current Chat"));
@@ -1746,6 +1803,24 @@ void MainWindow::setupMenuBar()
 
     copyOnionAction->setText(tr("Copy Chat Onion URL"));
     chatMenu->addAction(copyOnionAction);
+
+    QMenu* dropboxMenu = menubar->addMenu("Dropbox");
+    m_dropboxAction->setText("Configure Dropbox");
+    dropboxMenu->addAction(m_dropboxAction);
+
+    QMenu* emailMenu = menubar->addMenu(tr("Email"));
+    QAction* mailAction = new QAction(tr("&Mail…"), this);
+    mailAction->setShortcut(QKeySequence(tr("Ctrl+M")));
+    connect(mailAction, &QAction::triggered, this, &MainWindow::openMailDialog);
+    emailMenu->addAction(mailAction);
+
+    emailMenu->addSeparator();
+    getMailOnionAction->setText("Get Email Onion Address");
+    emailMenu->addAction(getMailOnionAction);
+    emailMenu->addSeparator();
+    newMailOnionAction->setText("New Email Onion");
+
+    emailMenu->addAction(newMailOnionAction);
 
     QMenu* settingsMenu = menubar->addMenu(tr("Settings"));
     factoryResetAction->setText(tr("Factory Reset"));
@@ -2067,6 +2142,19 @@ void MainWindow::setupActions()
                                  tr("The HTTP file-sharing onion address has been copied to your clipboard:\n%1").arg(onionAddress));
     });
 
+    getMailOnionAction = new QAction(this);
+
+    getMailOnionAction->setObjectName("getmailponion");
+    getMailOnionAction->setToolTip(tr("Copy Email server onion address"));
+    connect(getMailOnionAction, &QAction::triggered, this, [this]() {
+        QString onionAddress = torConfig.getMailOnionAddress();
+        QClipboard* clipboard = QGuiApplication::clipboard();
+        clipboard->setText(onionAddress);
+        QMessageBox::information(this, tr("Onion Address Copied"),
+                                 tr("The Email onion address has been copied to your clipboard:\n%1").arg(onionAddress));
+    });
+
+
     getWWWDirAction = new QAction(QIcon(":/icons/folder.svg"), tr(""), this);
 
     getWWWDirAction->setObjectName("getwwwdir");
@@ -2149,6 +2237,36 @@ void MainWindow::setupActions()
             );
     });
 
+    newMailOnionAction = new QAction(this);
+    newMailOnionAction->setObjectName("newmailonion");
+    newMailOnionAction->setToolTip(tr("Request a new Tor mail onion address"));
+    connect(newMailOnionAction, &QAction::triggered, this, [this]() {
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            this,
+            tr("Confirm New Mail Onion"),
+            tr("This will reset the mail hidden service's onion address.\n"
+               "All mail accounts share this onion, so their addresses will change.\n"
+               "A new onion will be generated after you restart the application.\n\n"
+               "Do you want to continue?"),
+            QMessageBox::Yes | QMessageBox::No);
+        if (reply != QMessageBox::Yes) return;
+
+        if (m_mailManager)
+            m_mailManager->stopReceiver();
+
+        m_torProcess->stopTor();   // or whatever your stop method is called
+
+        const QString hiddenDir = torConfig.getMailHiddenServiceDir();
+        QDir dir(hiddenDir);
+        if (dir.exists()) dir.removeRecursively();
+
+        QMessageBox::information(
+            this,
+            tr("New Mail Onion Requested"),
+            tr("The mail hidden service's onion address has been reset.\n"
+               "A new onion address will be available after you restart the application.\n\n"
+               "Your existing accounts will show the old address until you recreate them."));
+    });
 
     openHttpClientAction = new QAction(QIcon(":/icons/chrome.svg"), tr(""), this);
 
@@ -2364,6 +2482,9 @@ void MainWindow::setupActions()
         m_siteDialog->raise();
 
     });
+
+    m_dropboxAction = new QAction("Open Dropbox Manager");
+    connect(m_dropboxAction, &QAction::triggered, this, &MainWindow::showDropboxDialog);
 }
 
 
@@ -3311,7 +3432,6 @@ TorProcess *MainWindow::torProcess() const
     return m_torProcess;
 }
 
-// mw.cpp
 void MainWindow::onBootstrapProgress(int percent)
 {
     if (m_bootstrapBar) {
@@ -3348,7 +3468,6 @@ void MainWindow::onCircuitCountries(const QStringList& countries)
         QAction* a = m_circuitMenu->addAction(
             QString("%1: %2").arg(roles.value(i, tr("Hop")), countries[i]));
         a->setEnabled(false);
-        qDebug()<<countries[i];
     }
 }
 */
@@ -3394,4 +3513,153 @@ QString MainWindow::flagFor(const QString& cc)
         uint(base + b.unicode() - 'A')
     };
     return QString::fromUcs4(cps, 2);
+}
+
+
+void MainWindow::showDropboxDialog()
+{
+    if (!m_dropboxDialog) {
+        m_dropboxDialog = new DropboxDialog(this);
+        connect(m_dropboxDialog, &DropboxDialog::newUuidRequested,
+                this, &MainWindow::onNewDropboxUuid);
+        connect(m_dropboxDialog, &DropboxDialog::publishRequested,
+                this, &MainWindow::onPublishDropbox);
+        connect(m_dropboxDialog, &DropboxDialog::unpublishRequested,
+                this, &MainWindow::onUnpublishDropbox);
+    }
+    updateDropboxDialog();
+    m_dropboxDialog->show();
+    m_dropboxDialog->raise();
+    m_dropboxDialog->activateWindow();
+}
+
+
+void MainWindow::updateDropboxDialog()
+{
+    if (!m_dropboxDialog)
+        return;
+    if (m_dropboxUuid.isEmpty())
+        m_dropboxDialog->setState(DropboxDialog::NoPage, {}, {});
+    else if (m_dropboxPublished)
+        m_dropboxDialog->setState(DropboxDialog::Published, m_dropboxUuid,
+                                  dropboxUrl(m_dropboxUuid));
+    else
+        m_dropboxDialog->setState(DropboxDialog::Unpublished, m_dropboxUuid, {});
+}
+
+
+
+
+void MainWindow::onNewDropboxUuid(bool removeOld)
+{
+    if (removeOld && !m_dropboxUuid.isEmpty()) {
+        m_siteManager->removeSite("/" + m_dropboxUuid + "/");
+        QDir(getWebsitesDir() + "/" + m_dropboxUuid).removeRecursively();
+        m_dropboxUuid.clear();
+        m_dropboxPublished = false;
+    }
+
+    m_dropboxUuid = createDropboxPage();
+    if (m_dropboxUuid.isEmpty()) {
+        QMessageBox::warning(this, tr("Dropbox"), tr("Could not create the drop page."));
+        return;
+    }
+    m_dropboxPublished = false;
+    updateDropboxDialog();
+    saveDropboxUuid();
+}
+
+void MainWindow::onPublishDropbox()
+{
+    if (m_dropboxUuid.isEmpty() || m_dropboxPublished)
+        return;
+    m_siteManager->setEnabled("/" + m_dropboxUuid + "/", true);
+    m_dropboxPublished = true;
+    updateDropboxDialog();
+    httpServer->restart();
+}
+
+void MainWindow::onUnpublishDropbox()
+{
+    if (m_dropboxUuid.isEmpty() || !m_dropboxPublished)
+        return;
+    m_siteManager->setEnabled("/" + m_dropboxUuid + "/", false);
+    m_dropboxPublished = false;
+    updateDropboxDialog();
+    httpServer->restart();
+
+}
+
+QString MainWindow::createDropboxPage()
+{
+    const QString uuid = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const QString dir = getWebsitesDir() + "/" + uuid;
+
+    if (!QDir().mkpath(dir))
+        return {};
+
+    QFile f(dir + "/index.html");
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+        QDir(dir).removeRecursively();
+        return {};
+    }
+    QTextStream out(&f);
+    out << "<!DOCTYPE html>\n"
+           "<html><head><meta charset=\"utf-8\"><title>Drop a file</title></head>\n"
+           "<body>\n<h1>Drop a file</h1>\n"
+           "<form method=\"POST\" enctype=\"multipart/form-data\" action=\"/drop/"
+        << uuid << "/\">\n"
+           "<input type=\"file\" name=\"file\" required>\n"
+           "<button type=\"submit\">Upload</button>\n"
+           "</form>\n"
+           "<p>One file at a time. To send several, put them in an archive first.</p>\n"
+           "</body></html>\n";
+    f.close();
+
+    QString err;
+    if (!m_siteManager->addSite("/" + uuid + "/", dir, &err)) {
+        QDir(dir).removeRecursively();
+        return {};
+    }
+    m_siteManager->setEnabled("/" + uuid + "/", false);
+    return uuid;
+}
+
+QString MainWindow::dropboxUrl(const QString& uuid) const
+{
+    return "http://" + torConfig.getFileOnionAddress() + "/" + uuid + "/";
+}
+
+void MainWindow::saveDropboxUuid()
+{
+    QSettings s;
+    s.setValue("dropbox/uuid", m_dropboxUuid);
+}
+
+void MainWindow::loadDropboxUuid()
+{
+    QSettings s;
+    m_dropboxUuid = s.value("dropbox/uuid").toString();
+
+    if (!m_dropboxUuid.isEmpty()) {
+        Site site;
+        const bool registered = m_siteManager->match("/" + m_dropboxUuid + "/", site);
+        const bool folderExists = QDir(getWebsitesDir() + "/" + m_dropboxUuid).exists();
+        if (!registered || !folderExists) {
+            m_dropboxUuid.clear();
+            saveDropboxUuid();
+        }
+    }
+}
+
+void MainWindow::openMailDialog()
+{
+
+    m_mailDialog->show();
+    m_mailDialog->raise();
+}
+
+void MainWindow::onMailReceived(int count)
+{
+    playSound(SoundType::EmailReceived, play);
 }

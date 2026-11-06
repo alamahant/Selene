@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+"""
+onion-smtp-receiver
+Minimal SMTP server for OnionMail inbound delivery.
+
+Listens on a local TCP port, accepts one message per connection, and writes
+the raw RFC 5322 message to <inbox_dir>/<id>.eml.
+
+Usage:
+    onion-smtp-receiver <listen_port> <inbox_dir>
+"""
+
+import os
+import socket
+import sys
+import threading
+import time
+import uuid
+
+HOSTNAME = "selene.local"
+MAX_SIZE = 25 * 1024 * 1024       # 25 MiB, matches the peer's SIZE advertisement
+READ_TIMEOUT = 120                # seconds; incoming sessions over Tor can be slow
+
+
+def log(msg):
+    sys.stderr.write(f"receiver: {msg}\n")
+    sys.stderr.flush()
+
+
+def read_line(f):
+    """Read one CRLF-terminated line as bytes; strip trailing CRLF."""
+    line = f.readline(8192)
+    if not line:
+        return None
+    return line.rstrip(b"\r\n")
+
+
+def handle(conn, inbox_dir):
+    conn.settimeout(READ_TIMEOUT)
+    f = conn.makefile("rb")
+
+    def send(s):
+        conn.sendall(s.encode("utf-8") + b"\r\n")
+
+    send(f"220 {HOSTNAME} ESMTP Onion SMTP Receiver")
+
+    mail_from = None
+    rcpt_to = []
+    size = 0
+    data = None
+
+    try:
+        while True:
+            line = read_line(f)
+            if line is None:
+                log("client closed unexpectedly")
+                return
+            cmd = line.decode("utf-8", errors="replace")
+            upper = cmd.upper()
+
+            if upper.startswith("EHLO") or upper.startswith("HELO"):
+                send(f"250-{HOSTNAME} Hello")
+                send("250-8BITMIME")
+                send(f"250-SIZE {MAX_SIZE}")
+                send("250 HELP")
+
+            elif upper.startswith("MAIL FROM:"):
+                addr = cmd[len("MAIL FROM:"):].strip()
+                if addr.startswith("<"):
+                    end = addr.find(">")
+                    addr = addr[1:end] if end >= 0 else addr[1:]
+                mail_from = addr
+                rcpt_to = []
+                size = 0
+                send("250 sender OK")
+
+            elif upper.startswith("RCPT TO:"):
+                addr = cmd[len("RCPT TO:"):].strip()
+                if addr.startswith("<"):
+                    end = addr.find(">")
+                    addr = addr[1:end] if end >= 0 else addr[1:]
+                rcpt_to.append(addr)
+                send("250 recipient OK")
+
+            elif upper == "DATA":
+                if not mail_from or not rcpt_to:
+                    send("503 need MAIL FROM and RCPT TO first")
+                    continue
+                send("354 go ahead")
+                data = b""
+                while True:
+                    ln = read_line(f)
+                    if ln is None:
+                        log("client closed mid-DATA")
+                        return
+                    if ln == b".":
+                        break
+                    if ln.startswith(b"."):
+                        ln = ln[1:]     # RFC 5321 dot-stuffing
+                    data += ln + b"\r\n"
+                    size += len(ln) + 2
+                    if size > MAX_SIZE:
+                        send("552 message too large")
+                        data = None
+                        break
+                if data is None:
+                    continue
+
+                msg_id = str(uuid.uuid4())
+                path = os.path.join(inbox_dir, msg_id + ".eml")
+                try:
+                    with open(path, "wb") as out:
+                        out.write(data)
+                    log(f"stored {path} ({size} bytes) from={mail_from} to={rcpt_to}")
+                except OSError as e:
+                    log(f"write failed: {e}")
+                    send("451 local error")
+                    continue
+                send("250 Message accepted")
+                # one message per connection
+                break
+
+            elif upper == "RSET":
+                mail_from = None
+                rcpt_to = []
+                size = 0
+                send("250 reset")
+
+            elif upper == "NOOP":
+                send("250 OK")
+
+            elif upper == "QUIT":
+                send("221 bye")
+                break
+
+            else:
+                send("500 command not recognized")
+
+    except (socket.timeout, ConnectionResetError, BrokenPipeError) as e:
+        log(f"connection aborted: {e}")
+    finally:
+        try:
+            f.close()
+        except OSError:
+            pass
+        try:
+            conn.close()
+        except OSError:
+            pass
+
+
+def main():
+    if len(sys.argv) < 3:
+        sys.stderr.write(__doc__)
+        sys.exit(1)
+
+    listen_port = int(sys.argv[1])
+    inbox_dir = sys.argv[2]
+
+    os.makedirs(inbox_dir, exist_ok=True)
+
+    srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    srv.bind(("127.0.0.1", listen_port))
+    srv.listen(16)
+    log(f"listening on 127.0.0.1:{listen_port} inbox={inbox_dir}")
+
+    try:
+        while True:
+            conn, peer = srv.accept()
+            threading.Thread(target=handle, args=(conn, inbox_dir), daemon=True).start()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        srv.close()
+
+
+if __name__ == "__main__":
+    main()

@@ -7,6 +7,7 @@
 #include <QCoreApplication>
 #include<QThread>
 #include "logger.h"
+
 class TorConfig
 {
 public:
@@ -20,6 +21,12 @@ public:     // Public data members (if any)
     static const int TOR_PORT = 9050;
     QString getFileOnionAddress() const;
 
+    QString getTorrcPath() const;
+
+    QString getMailHiddenServiceDir() const;
+
+    QString getMailOnionAddress() const;
+
 private:
     QString hiddenServiceDir;
     QString filehiddenServiceDir;
@@ -29,6 +36,8 @@ private:
     QString onionAddress;
     QString fileOnionAddress;
     QString wwwPath;
+    QString mailHiddenServiceDir;
+    QString mailOnionAddress;
 private:
     bool createTorrcEntry();
 };

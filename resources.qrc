@@ -37,5 +37,6 @@
         <file>icons/chrome.svg</file>
         <file>icons/shield.svg</file>
         <file>icons/globe.svg</file>
+        <file>sound/mail.wav</file>
     </qresource>
 </RCC>

@@ -217,6 +217,8 @@ find_package(OpenSSL REQUIRED)
         sitemanager.cpp sitemanager.h
         sitemanagerdialog.cpp sitemanagerdialog.h
         torcirquitworker.cpp torcirquitworker.h
+        donationdialog.h dropboxdialog.cpp
+        mailaccount.h maildialog.cpp maildialog.h mailitem.h mailmanager.cpp mailmanager.h mailworker.cpp mailworker.h
 
     )
 # Define target properties for Android with Qt 6 as:
@@ -290,6 +292,14 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/favicons/16x16.png"
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/favicons/32x32.png"
         DESTINATION "share/icons/hicolor/32x32/apps"
         RENAME "io.github.alamahant.Selene.png")
+
+install(FILES
+        "${CMAKE_CURRENT_SOURCE_DIR}/onion-smtp-forwarder"
+        "${CMAKE_CURRENT_SOURCE_DIR}/onion-smtp-receiver"
+    DESTINATION "bin"
+    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
+                GROUP_READ GROUP_EXECUTE
+                WORLD_READ WORLD_EXECUTE)
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(Selene)

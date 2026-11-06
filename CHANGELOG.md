@@ -2,6 +2,18 @@
 
 All notable changes to Selene will be documented in this file.
 
+## [1.1.2] - 2026-11-06
+
+### Added
+- **Mail**: A full peer-to-peer email client over Tor — write to and receive from `<user>@<onion>.onion` addresses, no account with anyone, no third-party server in the middle
+- **Mail Compose**: Compose tab with To, Subject, Body, account selector, and a Retry button for failed messages
+- **Mail Inbox**: A Start/Stop Listening button on the Inbox tab; incoming mail appears as it arrives, no manual refresh
+- **Mail Attachments**: Attach files to a message — they're shared as links through your Tor onion and added to the body
+- **Mail Notifications**: A sound plays when new mail arrives
+- **Mail Accounts**: Create and remove mail addresses tied to your app's own Tor hidden service
+- **Dropbox**: A one-way file drop over Tor — share a link, anyone can upload a file to your Downloads folder without an account, and every upload is logged
+
+---
 
 ## [1.1.1] - 2026-11-01
 

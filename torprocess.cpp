@@ -194,55 +194,6 @@ void TorProcess::killExistingTorProcesses()
     QThread::msleep(500);
 }
 
-/*
-void TorProcess::newTorCircuit()
-{
-    if (!isTorRunning()) {
-        Logger::log(Logger::ERROR, "Cannot request new circuit - Tor is not running");
-        Notification("Tor Circuit", "Cannot request new circuit - Tor is not running", 3000,
-                     QSystemTrayIcon::Warning);
-        return;
-    }
-
-    QTcpSocket socket;
-    Logger::log(Logger::INFO, "Attempting to connect to control port 9051...");
-    socket.connectToHost("localhost", DefaultControlPort);
-
-    if (!socket.waitForConnected(3000)) {
-        Logger::log(Logger::ERROR, "Failed to connect to control port: " + socket.errorString());
-        Notification("Tor Circuit", "Failed to request new circuit", 3000,
-                     QSystemTrayIcon::Critical);
-        return;
-    }
-
-    Logger::log(Logger::INFO, "Connected to control port");
-    socket.write("AUTHENTICATE\r\n");
-    socket.write("SIGNAL NEWNYM\r\n");
-    socket.waitForBytesWritten();
-
-    if (!socket.waitForReadyRead(3000)) {
-        Logger::log(Logger::ERROR, "No response from control port: " + socket.errorString());
-        socket.close();
-        Notification("Tor Circuit", "Failed to request new circuit", 3000,
-                     QSystemTrayIcon::Critical);
-        return;
-    }
-
-    const QString response = QString::fromUtf8(socket.readAll());
-    socket.close();
-    Logger::log(Logger::INFO, "Received response: " + response);
-
-    if (response.contains("250 OK")) {
-        Logger::log(Logger::INFO, "New Tor circuit requested - path changed");
-        Notification("Tor Circuit", "New Tor circuit established successfully");
-        return;
-    }
-
-    Logger::log(Logger::ERROR, "Failed to request new circuit");
-    Notification("Tor Circuit", "Failed to request new circuit", 3000,
-                 QSystemTrayIcon::Critical);
-}
-*/
 
 void TorProcess::newTorCircuit()
 {
@@ -264,7 +215,6 @@ void TorProcess::newTorCircuit()
     */
 
 
-    // If a peer is connected, don't force-close circuits — it would drop the session.
     const bool idle = m_networkManager->getConnectedPeers().isEmpty();
 
     QTcpSocket socket;
@@ -295,7 +245,6 @@ void TorProcess::newTorCircuit()
         return;
     }
 
-    // Only force-close circuits when there is no active peer connection.
     if (idle) {
         socket.write("GETINFO circuit-status\r\n");
         socket.waitForBytesWritten(500);

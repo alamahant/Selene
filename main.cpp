@@ -57,11 +57,9 @@ static void killStoredTorPid()
 int main(int argc, char *argv[])
 {
 
-    //#ifndef FLATHUB_BUILD
         QCoreApplication::setOrganizationName("Alamahant");
-    //#endif
         QCoreApplication::setApplicationName("Selene");
-        QCoreApplication::setApplicationVersion("1.1.1");
+        QCoreApplication::setApplicationVersion("1.1.2");
 
     killStoredTorPid();
 
@@ -73,7 +71,6 @@ int main(int argc, char *argv[])
     QDir().mkpath(getCryptoDirPath()); // Ensure the directory exists
     QDir().mkpath(getContactsDirPath()); // Ensure the directory exists
     QDir().mkpath(getFileSaveDirPath());
-    //QDir().mkpath(getConfigDirPath());
     QDir().mkpath(getDocumentsDirPath());
     QDir().mkpath(getWWWDir());
     QDir().mkpath(getDownloadsDirPath());
@@ -92,7 +89,6 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
 
-//#ifdef Q_OS_WIN
     a.setStyle(QStyleFactory::create("Fusion"));
 
     QPalette lightPalette;
@@ -106,7 +102,6 @@ int main(int argc, char *argv[])
     lightPalette.setColor(QPalette::HighlightedText, Qt::white);
 
     a.setPalette(lightPalette);
-//#endif
 
 
     if (FONTSIZE > 0.0) {
