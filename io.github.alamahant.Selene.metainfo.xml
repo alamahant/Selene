@@ -91,7 +91,7 @@ Selene is designed for privacy advocates and secure communication enthusiasts, o
   <description>
     <p>Added:</p>
     <ul>
-      <li>Mail: A full peer-to-peer email client over Tor. Write to and receive from user@onion .onion addresses, no account with anyone, no third-party server in the middle</li>
+      <li>Mail: A full peer-to-peer email client over Tor. Write to and receive from user@onion .onion addresses, no account with any provider needed, no third-party server in the middle</li>
       <li>Mail Compose: Compose tab with To, Subject, Body, account selector, and a Retry button for failed messages</li>
       <li>Mail Inbox: A Start/Stop Listening button on the Inbox tab; incoming mail appears as it arrives, no manual refresh</li>
       <li>Mail Attachments: Attach files to a message — they're shared as links through your Tor onion and added to the body</li>
